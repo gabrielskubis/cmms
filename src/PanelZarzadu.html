@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMMS – Panel Zarządu</title>
+  <style>
+    :root {
+      --navy: #0f172a; --muted: #64748b; --border: #e2e8f0; --bg: #f8fafc;
+      --ok: #059669; --okbg: #ecfdf5; --warn: #b45309; --warnbg: #fffbeb;
+      --danger: #dc2626; --dangerbg: #fef2f2; --accent: #1e40af;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+           background: var(--bg); color: var(--navy); margin: 0; padding: 20px 16px 40px; }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    header h1 { font-size: 1.4rem; margin: 0; }
+    header .sub { font-size: .85rem; color: var(--muted); }
+    .odswiez { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px;
+               font-size: .8rem; color: var(--accent); font-weight: 600; cursor: pointer; }
+
+    .kafelki { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+    @media (max-width: 720px) { .kafelki { grid-template-columns: repeat(2, 1fr); } }
+    .kaf { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .kaf .etyk { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
+    .kaf .wart { font-size: 1.9rem; font-weight: 800; line-height: 1; }
+    .kaf .trend { font-size: .78rem; font-weight: 600; margin-top: 6px; }
+    .kaf.dobre .wart { color: var(--ok); }
+    .kaf.uwaga .wart { color: var(--warn); }
+    .kaf.zle .wart { color: var(--danger); }
+    .kaf .brak { color: var(--muted); font-size: .82rem; font-weight: 500; margin-top: 4px; }
+
+    .karta { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+    .karta h2 { font-size: .95rem; font-weight: 700; margin: 0 0 14px; }
+    .pusto { color: var(--muted); font-size: .85rem; font-style: italic; }
+
+    .wykresy { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .wykresy { grid-template-columns: 1fr; } }
+    .bary { display: flex; align-items: flex-end; gap: 14px; height: 120px; padding-top: 8px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+    .bar { width: 100%; max-width: 46px; border-radius: 6px 6px 0 0; background: var(--accent); position: relative; }
+    .bar .val { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-size: .75rem; font-weight: 700; color: var(--navy); }
+    .bar-lbl { font-size: .72rem; color: var(--muted); margin-top: 6px; text-align: center; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    th { text-align: left; padding: 6px 8px; color: var(--muted); font-size: .72rem; text-transform: uppercase;
+         letter-spacing: .03em; border-bottom: 2px solid var(--border); }
+    td { padding: 9px 8px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .id { color: var(--muted); font-size: .78rem; }
+    .badge { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+    .badge.zle { background: var(--dangerbg); color: var(--danger); }
+    .badge.uwaga { background: var(--warnbg); color: var(--warn); }
+
+    footer { text-align: center; font-size: .75rem; color: var(--muted); margin-top: 24px; }
+    .demo { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; border-radius: 10px; padding: 10px 16px; font-size: .85rem; margin-bottom: 16px; }
+    .blad { background: var(--dangerbg); border: 1px solid #fca5a5; color: var(--danger); border-radius: 10px; padding: 16px 20px; font-size: .9rem; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📊 Panel Zarządu — CMMS Kraków / Nowa Huta</h1>
+      <div class="sub" id="stanNa"></div>
+    </div>
+    <button class="odswiez" onclick="location.reload()">↻ Odśwież</button>
+  </header>
+
+  <div id="demo" class="demo" style="display:none;">🧪 <b>Widok przykładowy</b> — dane symulowane. Tak panel będzie wyglądał po kilku miesiącach używania systemu.</div>
+  <div id="blad" class="blad" style="display:none;"></div>
+  <div id="tresc"></div>
+
+  <footer>Dane liczone na żywo z arkusza CMMS przy każdym otwarciu strony. Widok tylko do odczytu.</footer>
+</div>
+
+<script>
+  var DANE = <?!= dane ? JSON.stringify(dane).replace(/</g, '\u003c') : 'null' ?>;
+  var BLAD = <?!= JSON.stringify(blad || '').replace(/</g, '\u003c') ?>;
+  var DEMO = <?!= demo ? 'true' : 'false' ?>;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function fmtData(s) { return String(s || '').substring(0, 10); }
+
+  function kafelekRealizacja(d) {
+    var klasa = d.realizacja >= 80 ? 'dobre' : (d.realizacja >= 50 ? 'uwaga' : 'zle');
+    var trend = '';
+    if (d.realizacjaTrend !== null) {
+      var strzalka = d.realizacjaTrend >= 0 ? '▲' : '▼';
+      var kolor = d.realizacjaTrend >= 0 ? 'var(--ok)' : 'var(--danger)';
+      trend = '<div class="trend" style="color:' + kolor + '">' + strzalka + ' ' +
+        Math.abs(d.realizacjaTrend).toFixed(1) + ' pkt vs poprzedni miesiąc</div>';
+    }
+    return '<div class="kaf ' + klasa + '"><div class="etyk">Realizacja planu przeglądów</div>' +
+      '<div class="wart">' + d.realizacja.toFixed(1) + '%</div>' + trend + '</div>';
+  }
+
+  function kafelekProste(etyk, wartosc, dobreGdyZero) {
+    var klasa = wartosc === 0 ? (dobreGdyZero ? 'dobre' : 'dobre') : (wartosc <= 2 ? 'uwaga' : 'zle');
+    return '<div class="kaf ' + klasa + '"><div class="etyk">' + etyk + '</div><div class="wart">' + wartosc + '</div></div>';
+  }
+
+  function kafelekUDT(d) {
+    if (!d.udtDostepne) {
+      return '<div class="kaf"><div class="etyk">Terminy UDT / kalibracji</div><div class="brak">Arkusz terminów nieuzupełniony</div></div>';
+    }
+    var klasa = d.udtProblem === 0 ? 'dobre' : (d.udtPoTerminie > 0 ? 'zle' : 'uwaga');
+    return '<div class="kaf ' + klasa + '"><div class="etyk">Terminy UDT / kalibracji</div>' +
+      '<div class="wart">' + d.udtProblem + '</div>' +
+      (d.udtPoTerminie > 0 ? '<div class="trend" style="color:var(--danger)">w tym ' + d.udtPoTerminie + ' po terminie</div>' : '') +
+      '</div>';
+  }
+
+  function wykresBar(lista, klucz, jednostka, format) {
+    if (!lista.length) return '<div class="pusto">Za mało danych do pokazania trendu.</div>';
+    var max = Math.max.apply(null, lista.map(function (x) { return x[klucz]; }).concat([1]));
+    return '<div class="bary">' + lista.map(function (x) {
+      var h = Math.max(6, Math.round(x[klucz] / max * 90));
+      return '<div class="bar-col"><div class="bar" style="height:' + h + 'px;">' +
+        '<div class="val">' + format(x[klucz]) + '</div></div>' +
+        '<div class="bar-lbl">' + esc(x.miesiac || x.label) + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function tabelaTop(lista) {
+    if (!lista.length) return '<div class="pusto">Brak zgłoszonych usterek — dobra wiadomość.</div>';
+    return '<table><tr><th>Maszyna</th><th style="text-align:right;">Usterki (otwarte + zamknięte)</th></tr>' +
+      lista.map(function (m) {
+        return '<tr><td>' + esc(m.nazwa || m.id) + ' <span class="id">' + esc(m.id) + '</span></td>' +
+          '<td style="text-align:right;font-weight:700;">' + m.liczba + '</td></tr>';
+      }).join('') + '</table>';
+  }
+
+  function tabelaWysokie(lista) {
+    if (!lista.length) return '<div class="pusto">Brak otwartych usterek z priorytetem Wysoki — dobra wiadomość.</div>';
+    return '<table><tr><th>Maszyna</th><th>Opis</th><th>Zgłoszono</th><th style="text-align:right;">Czeka</th></tr>' +
+      lista.map(function (u) {
+        var dni = u.dni == null ? '—' : u.dni + ' d';
+        var badge = (u.dni || 0) > 7 ? 'zle' : 'uwaga';
+        return '<tr><td>' + esc(u.nazwa || u.id) + ' <span class="id">' + esc(u.id) + '</span></td>' +
+          '<td>' + esc(u.opis) + '</td><td class="id">' + fmtData(u.data) + '</td>' +
+          '<td style="text-align:right;"><span class="badge ' + badge + '">' + dni + '</span></td></tr>';
+      }).join('') + '</table>';
+  }
+
+  function render() {
+    if (BLAD || !DANE) {
+      document.getElementById('blad').style.display = 'block';
+      document.getElementById('blad').textContent = '❌ Nie udało się wczytać danych: ' + (BLAD || 'nieznany błąd');
+      return;
+    }
+    document.getElementById('stanNa').textContent = 'Stan na ' + DANE.aktualizacja;
+    if (DEMO) document.getElementById('demo').style.display = 'block';
+
+    var html = '';
+    html += '<div class="kafelki">' +
+      kafelekRealizacja(DANE) +
+      kafelekProste('Otwarte usterki — priorytet Wysoki', DANE.otwarteWysokieLiczba) +
+      kafelekProste('Maszyny aktualnie stojące', DANE.maszynyStojace) +
+      kafelekUDT(DANE) +
+      '</div>';
+
+    html += '<div class="karta"><h2>Trend — ostatnie miesiące</h2><div class="wykresy">' +
+      '<div><div class="bar-lbl" style="margin-bottom:8px;font-weight:600;color:var(--navy);">Realizacja planu (%)</div>' +
+        wykresBar(DANE.trendRealizacji, 'pct', '%', function (v) { return v.toFixed(0) + '%'; }) + '</div>' +
+      '<div><div class="bar-lbl" style="margin-bottom:8px;font-weight:600;color:var(--navy);">Zgłoszone usterki (szt.)</div>' +
+        wykresBar(DANE.trendUsterek, 'liczba', '', function (v) { return v; }) + '</div>' +
+      '</div></div>';
+
+    html += '<div class="karta"><h2>Najbardziej awaryjne maszyny</h2>' + tabelaTop(DANE.topMaszyny) + '</div>';
+    html += '<div class="karta"><h2>Otwarte usterki — priorytet Wysoki</h2>' + tabelaWysokie(DANE.otwarteWysokie) + '</div>';
+
+    document.getElementById('tresc').innerHTML = html;
+  }
+
+  render();
+</script>
+</body>
+</html>

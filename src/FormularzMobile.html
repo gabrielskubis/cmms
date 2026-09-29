@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Przeglądy – rozliczenie</title>
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b; --field: #0b1222; --border: #334155;
+      --text: #f8fafc; --muted: #94a3b8; --accent: #2563eb; --accent-2: #1d4ed8;
+      --ok: #10b981; --danger: #ef4444; --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 17px; -webkit-text-size-adjust: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+           background: var(--bg); color: var(--text); margin: 0; padding: 12px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 520px; }
+    header { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 2px 12px; }
+    header h1 { font-size: 1.15rem; margin: 0; }
+    header .data { font-size: .8rem; color: var(--muted); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .krok { font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted);
+            display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .krok b { background: var(--accent); color: #fff; border-radius: 50%; width: 20px; height: 20px;
+              display: inline-flex; align-items: center; justify-content: center; font-size: .7rem; }
+    label { display: block; font-size: .85rem; color: var(--muted); margin: 10px 0 5px; }
+    input, select, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+                              background: var(--field); color: var(--text); font-size: 16px; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    /* ---- lista ---- */
+    .chipy { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .chip { flex: 0 0 auto; border: 1px solid var(--border); background: var(--field); color: var(--muted);
+            border-radius: 999px; padding: 9px 13px; font-size: .86rem; font-weight: 600; }
+    .chip span { margin-left: 4px; opacity: .85; }
+    .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .filtry-rzad { display: flex; gap: 8px; }
+    .filtry-rzad input { flex: 3; } .filtry-rzad select { flex: 2; }
+    .lista { max-height: 62vh; overflow-y: auto; margin-top: 10px; border-radius: 8px; }
+    .grupa { font-size: .72rem; font-weight: 700; text-transform: uppercase; color: var(--muted);
+             padding: 8px 4px 4px; position: sticky; top: 0; background: var(--card); }
+    .poz { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%;
+           text-align: left; background: var(--field); border: 1px solid var(--border); border-radius: 10px;
+           padding: 14px 14px; margin-bottom: 8px; color: var(--text); font-family: inherit; cursor: pointer;
+           transition: border-color .12s, background .12s; }
+    .poz:hover { border-color: #475569; background: #0f1830; }
+    .poz:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .poz.wybrany { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37, 99, 235, .45); }
+    .poz .n { font-weight: 700; font-size: 1.02rem; }
+    .poz .m { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+    .poz .hist-btn { border-radius: 8px; }
+    .poz .hist-btn:hover { background: rgba(255,255,255,.08); opacity: 1; }
+    .badge { flex: 0 0 auto; font-size: .72rem; font-weight: 700; border-radius: 6px; padding: 4px 8px; white-space: nowrap; }
+    .b-zal { background: rgba(239, 68, 68, .18); color: #fca5a5; }
+    .b-dzis { background: rgba(245, 158, 11, .2); color: #fcd34d; }
+    .b-nad { background: rgba(37, 99, 235, .2); color: #93c5fd; }
+    .b-wyk { background: rgba(16, 185, 129, .2); color: #6ee7b7; }
+    .pusto { color: var(--muted); font-style: italic; font-size: .9rem; padding: 12px 4px; }
+
+    /* ---- ekran wybranej maszyny ---- */
+    .rozl { border: 1px solid #3b82f6; }
+    .wroc { background: none; border: none; color: #93c5fd; font-size: .95rem; font-family: inherit; padding: 4px 0 10px; }
+    .rozl-nazwa { font-size: 1.35rem; font-weight: 800; line-height: 1.2; }
+    .pill { background: #334155; color: #e2e8f0; border-radius: 6px; padding: 4px 8px; font-size: .72rem; font-weight: 700; }
+    .pole-blad { border-color: var(--danger) !important; box-shadow: 0 0 0 2px rgba(239, 68, 68, .35); }
+    .rozl-meta { font-size: .85rem; color: var(--muted); margin: 6px 0 2px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .czek-tytul { font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 16px 0 4px; }
+    .punkty { list-style: none; margin: 0; padding: 0; }
+    .punkty li { font-size: 1.05rem; line-height: 1.4; padding: 11px 0 11px 22px; border-bottom: 1px solid var(--border); position: relative; }
+    .punkty li:last-child { border-bottom: none; }
+    .punkty li::before { content: ''; position: absolute; left: 2px; top: 19px; width: 9px; height: 9px; border-radius: 50%; background: #3b82f6; }
+    .gwiazdka { font-size: .8rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+    .dwa { display: flex; gap: 8px; }
+    .dwa > div:first-child { flex: 2; } .dwa > div:last-child { flex: 1; }
+    .duze { display: flex; gap: 10px; margin-top: 16px; }
+    .duzy { flex: 1; min-height: 108px; border-radius: 14px; border: 2px solid var(--border); font-family: inherit;
+            font-size: 1.12rem; font-weight: 800; line-height: 1.2; padding: 10px 8px; }
+    .duzy .ik { display: block; font-size: 1.9rem; line-height: 1; margin-bottom: 6px; }
+    .duzy small { display: block; font-size: .78rem; font-weight: 600; opacity: .85; margin-top: 4px; }
+    .duzy.ok { background: #059669; border-color: #10b981; color: #fff; }
+    .duzy.problem { background: rgba(239, 68, 68, .14); border-color: var(--danger); color: #fecaca; }
+    .duzy:disabled { opacity: .55; }
+    .blad-rozl { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: .9rem;
+                 background: rgba(239, 68, 68, .15); border: 1px solid var(--danger); color: #fca5a5; }
+    .dtr-status { font-size: .82rem; color: #6ee7b7; margin-top: 10px; }
+    .link { background: none; border: none; color: #93c5fd; font-size: .92rem; padding: 8px 0; font-family: inherit; text-decoration: underline; }
+
+    .problem-box { margin-top: 16px; padding: 12px; border: 2px solid var(--danger); border-radius: 12px; background: rgba(239, 68, 68, .07); }
+    .problem-box h3 { margin: 0 0 8px; font-size: 1rem; color: #fecaca; }
+    .chipy-punkty { display: flex; flex-direction: column; gap: 6px; }
+    .cp { text-align: left; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--field);
+          color: var(--text); font-family: inherit; font-size: .95rem; line-height: 1.3; }
+    .cp.active { border-color: var(--danger); background: rgba(239, 68, 68, .2); color: #fff; font-weight: 700; }
+    .prio { display: flex; gap: 6px; }
+    .prio button { flex: 1; padding: 13px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--field);
+                   color: var(--muted); font-weight: 600; font-family: inherit; font-size: .92rem; }
+    .prio button.active[data-p="Niski"] { border-color: #64748b; color: #e2e8f0; background: #334155; }
+    .prio button.active[data-p="Średni"] { border-color: var(--warn); color: #fcd34d; background: rgba(245, 158, 11, .15); }
+    .prio button.active[data-p="Wysoki"] { border-color: var(--danger); color: #fca5a5; background: rgba(239, 68, 68, .18); }
+    .wyslij { width: 100%; min-height: 64px; margin-top: 14px; border: none; border-radius: 12px; background: var(--danger); color: #fff;
+              font-size: 1.05rem; font-weight: 800; font-family: inherit; }
+    .wyslij:disabled { opacity: .55; }
+    .anuluj { width: 100%; margin-top: 8px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: transparent;
+              color: var(--muted); font-family: inherit; font-size: .92rem; }
+    .dtr { margin-top: 16px; border: 2px solid var(--warn); background: rgba(245, 158, 11, .1); border-radius: 12px; padding: 14px; }
+    .dtr p { margin: 0 0 12px; font-size: .95rem; font-weight: 600; line-height: 1.45; color: #fde68a; }
+    .dtr .tak { width: 100%; min-height: 64px; border: none; border-radius: 12px; background: var(--warn); color: #1f2937;
+                font-size: 1.05rem; font-weight: 800; font-family: inherit; }
+    .dtr .tak:disabled { opacity: .55; }
+
+    .nastepna { width: 100%; margin-bottom: 12px; min-height: 60px; border: none; border-radius: 12px; background: var(--accent);
+                color: #fff; font-size: 1rem; font-weight: 700; font-family: inherit; padding: 10px 14px; }
+
+    .komunikat { display: none; padding: 12px; border-radius: 10px; margin-bottom: 12px; font-size: .95rem; line-height: 1.4; }
+    .k-ok { display: block; background: rgba(16, 185, 129, .15); border: 1px solid var(--ok); color: #6ee7b7; }
+    .k-bl { display: block; background: rgba(239, 68, 68, .15); border: 1px solid var(--danger); color: #fca5a5; }
+    .k-info { display: block; background: rgba(37, 99, 235, .15); border: 1px solid var(--accent); color: #bfdbfe; }
+
+    /* ---- skan QR: karta maszyny, zakładki, usterki, historia ---- */
+    .maszyna { background: linear-gradient(135deg, #1e3a8a, #1e293b); border: 1px solid #3b82f6; }
+    .maszyna .etyk { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #93c5fd; }
+    .maszyna .nazwa { font-size: 1.3rem; font-weight: 800; margin: 4px 0 2px; }
+    .maszyna .meta { font-size: .85rem; color: #cbd5e1; }
+    .inna { display: block; width: 100%; margin-top: 12px; padding: 11px; border-radius: 8px; border: 1px dashed #475569;
+            background: transparent; color: var(--muted); font-size: .85rem; font-family: inherit; }
+    .zakladki { display: flex; gap: 8px; margin-bottom: 12px; }
+    .zakladka { flex: 1; padding: 15px 6px; border-radius: 12px; border: 2px solid var(--border); background: var(--card);
+                color: var(--muted); font-weight: 700; font-size: .95rem; font-family: inherit; }
+    .zakladka.active[data-widok="przeglad"] { border-color: var(--accent); color: #fff; background: rgba(37, 99, 235, .25); }
+    .zakladka.active[data-widok="awaria"] { border-color: var(--danger); color: #fff; background: rgba(239, 68, 68, .25); }
+    .wyniki { display: flex; gap: 8px; }
+    .wyn { flex: 1; padding: 17px 8px; border-radius: 10px; border: 2px solid var(--border); background: var(--field);
+           color: var(--muted); font-weight: 700; font-size: .95rem; font-family: inherit; }
+    .wyn.ok.active { border-color: var(--ok); background: rgba(16, 185, 129, .15); color: #6ee7b7; }
+    .wyn.nok.active { border-color: var(--danger); background: rgba(239, 68, 68, .15); color: #fca5a5; }
+    .podpowiedz { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+    .ust { background: var(--field); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+    .ust .gora { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .ust .opis { font-size: .92rem; line-height: 1.4; }
+    .ust .meta { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+    .ust .akcje { display: flex; gap: 6px; margin-top: 10px; }
+    .ust .akcje button { flex: 1; padding: 12px 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--card);
+                        color: var(--text); font-weight: 600; font-size: .88rem; font-family: inherit; }
+    .ust .obsluga { display: none; margin-top: 10px; }
+    .b-stoi { background: rgba(239, 68, 68, .35); color: #fff; }
+    .b-trakcie { background: rgba(245, 158, 11, .25); color: #fcd34d; }
+    .b-zgl { background: rgba(239, 68, 68, .18); color: #fca5a5; }
+    .b-prio { background: #334155; color: #e2e8f0; }
+    .hist { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
+    .hist:last-child { border-bottom: none; }
+    .hist .kropka { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; }
+    details.card summary { cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .btn-awaria { width: 100%; min-height: 64px; border: none; border-radius: 12px; background: var(--danger); color: #fff;
+                  font-size: 1.05rem; font-weight: 800; font-family: inherit; margin-top: 12px; }
+    .btn-awaria:disabled { opacity: .6; }
+    .odswiez { background: none; border: none; color: var(--muted); font-size: .85rem; text-decoration: underline; padding: 6px 0; font-family: inherit; }
+    .hist-btn { flex: 0 0 auto; background: none; border: none; font-size: 1.1rem; padding: 4px 2px; opacity: .6; }
+    @media (min-width: 768px) {
+      body { padding: 24px; background: #070e1c; }
+      .container { max-width: 860px; display: grid; grid-template-columns: 340px 1fr; grid-template-rows: auto; gap: 0 20px; align-items: start; }
+      header { grid-column: 1 / -1; }
+      #komunikat { grid-column: 1 / -1; }
+      #nastepnaBox { grid-column: 1 / -1; }
+      #kartaMaszyny { grid-column: 1 / -1; }
+      #panelMaszyny { grid-column: 1 / -1; }
+      #kartaHistoriiInline { grid-column: 1 / -1; }
+      #kartaHistorii { grid-column: 1 / -1; }
+      #widokPrzeglad { display: contents; }
+      #kartaLista { grid-column: 1; grid-row: 2; }
+      #kartaRozl { grid-column: 2; grid-row: 2; }
+      .lista { max-height: 75vh; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📋 Przeglądy</h1>
+    <span class="data" id="dzisiaj"></span>
+  </header>
+
+  <div id="komunikat" class="komunikat"></div>
+  <div id="nastepnaBox" style="display:none;"><button type="button" class="nastepna" id="btnNastepna"></button></div>
+
+  <!-- KARTA MASZYNY (tylko po zeskanowaniu kodu QR) -->
+  <div class="card maszyna" id="kartaMaszyny" style="display:none;"></div>
+
+  <!-- PANEL MASZYNY: zakładki, usterki, zgłoszenie awarii (tylko po skanie QR) -->
+  <div id="panelMaszyny" style="display:none;">
+    <div class="zakladki">
+      <button type="button" class="zakladka active" data-widok="przeglad">📋 Rozlicz przegląd</button>
+      <button type="button" class="zakladka" data-widok="awaria">🚨 Zgłoś awarię</button>
+    </div>
+
+    <div class="card" id="kartaUsterek" style="display:none;">
+      <div class="krok">🔧 Otwarte usterki tej maszyny (<span id="lUsterek">0</span>)</div>
+      <div id="listaUsterek"></div>
+    </div>
+
+    <form class="card" id="formAwaria" style="display:none;" novalidate>
+      <div class="krok" style="color:#fca5a5;">🚨 Zgłoszenie awarii</div>
+      <label style="margin-top:0;">Zgłaszający</label>
+      <div id="poleZglaszajacy"><input type="text" id="zglaszajacy" placeholder="Imię i nazwisko"></div>
+      <label>Czy maszyna stoi?</label>
+      <div class="wyniki">
+        <button type="button" class="wyn stoiBtn nok" data-s="TAK">⛔ TAK, stoi</button>
+        <button type="button" class="wyn stoiBtn ok active" data-s="NIE">NIE, pracuje</button>
+      </div>
+      <label>Priorytet</label>
+      <div class="prio prioA">
+        <button type="button" data-p="Niski">Niski</button>
+        <button type="button" data-p="Średni" class="active">Średni</button>
+        <button type="button" data-p="Wysoki">Wysoki</button>
+      </div>
+      <label for="opisAwarii">Co się dzieje?</label>
+      <textarea id="opisAwarii" rows="3" placeholder="Np. głośna praca łożyska, wyciek oleju z reduktora…"></textarea>
+      <label for="czesciAwarii">Potrzebne części / zalecenia <span style="opacity:.7">(opcjonalnie)</span></label>
+      <textarea id="czesciAwarii" rows="2" placeholder="Np. łożysko 6205, uszczelka…"></textarea>
+      <button type="submit" class="btn-awaria" id="btnAwaria">🚨 Wyślij zgłoszenie awarii</button>
+      <div class="podpowiedz" style="text-align:center;">Kierownik dostanie e-mail od razu po wysłaniu.</div>
+    </form>
+  </div>
+
+  <div id="widokPrzeglad">
+
+    <!-- LISTA PRZEGLĄDÓW -->
+    <div class="card" id="kartaLista">
+      <div class="krok" style="justify-content: space-between;">
+        <span id="tytulKroku1">Wybierz maszynę</span>
+        <button type="button" class="odswiez" id="btnOdswiez">↻ odśwież</button>
+      </div>
+
+      <div id="filtryBox">
+        <div class="chipy">
+          <button type="button" class="chip" data-tryb="dozrobienia">Do zrobienia <span id="c-dozrobienia"></span></button>
+          <button type="button" class="chip" data-tryb="zalegly">Zaległe <span id="c-zalegly"></span></button>
+          <button type="button" class="chip" data-tryb="dzis">Dziś <span id="c-dzis"></span></button>
+          <button type="button" class="chip" data-tryb="nadchodzacy">14 dni <span id="c-nadchodzacy"></span></button>
+          <button type="button" class="chip" data-tryb="wszystkie">Wszystkie <span id="c-wszystkie"></span></button>
+        </div>
+        <div class="filtry-rzad">
+          <input type="search" id="szukaj" placeholder="🔍 Maszyna lub ID">
+          <select id="filtrObszar"><option value="">Wszystkie</option></select>
+        </div>
+      </div>
+
+      <div class="lista" id="lista"></div>
+    </div>
+
+    <!-- EKRAN WYBRANEJ MASZYNY -->
+    <div class="card rozl" id="kartaRozl" style="display:none;">
+      <button type="button" class="wroc" id="btnWroc">← Wróć do listy</button>
+      <div id="rozlNaglowek"></div>
+
+      <div class="czek-tytul">Co sprawdzić</div>
+      <ul class="punkty" id="rozlPunkty"></ul>
+      <div class="gwiazdka" id="rozlGwiazdka"></div>
+
+      <div class="dwa" style="margin-top:14px;">
+        <div>
+          <label for="wykonawca" style="margin-top:0;">Wykonawca</label>
+          <select id="wykonawca"><option value="">Wczytywanie…</option></select>
+        </div>
+        <div>
+          <label for="czas" style="margin-top:0;">Czas (h)</label>
+          <input type="text" id="czas" inputmode="decimal" value="0,5">
+        </div>
+      </div>
+      <button type="button" class="link" id="btnOpis">＋ dodaj opis prac (opcjonalnie)</button>
+      <textarea id="opis" rows="2" placeholder="Co zostało zrobione, co wymieniono…" style="display:none;margin-top:4px;"></textarea>
+
+      <div class="blad-rozl" id="bladRozl"></div>
+
+      <div class="duze" id="przyciskiWynik">
+        <button type="button" class="duzy ok" id="btnOk"><span class="ik">✅</span>Wszystko OK<small>zapisz przegląd</small></button>
+        <button type="button" class="duzy problem" id="btnProblem"><span class="ik">⚠️</span>Jest problem<small>zgłoś usterkę</small></button>
+      </div>
+      <div class="dtr-status" id="dtrStatus"></div>
+
+      <!-- ZGŁOSZENIE PROBLEMU -->
+      <div class="problem-box" id="panelProblem" style="display:none;">
+        <h3>⚠️ Co jest nie tak?</h3>
+        <label style="margin-top:0;">Zaznacz punkty, których dotyczy problem</label>
+        <div class="chipy-punkty" id="problemPunkty"></div>
+        <label>Priorytet</label>
+        <div class="prio">
+          <button type="button" data-p="Niski">Niski</button>
+          <button type="button" data-p="Średni" class="active">Średni</button>
+          <button type="button" data-p="Wysoki">Wysoki</button>
+        </div>
+        <label for="opisUsterki">Opisz własnymi słowami <span style="opacity:.7">(jeśli trzeba)</span></label>
+        <textarea id="opisUsterki" rows="3" placeholder="Np. wyciek oleju przy reduktorze, głośna praca…"></textarea>
+        <label for="zalecenia">Potrzebne części / zalecenia <span style="opacity:.7">(opcjonalnie)</span></label>
+        <textarea id="zalecenia" rows="2" placeholder="Np. łożysko 6205…"></textarea>
+        <button type="button" class="wyslij" id="btnWyslijProblem">🚨 Wyślij zgłoszenie usterki</button>
+        <button type="button" class="anuluj" id="btnAnulujProblem">Anuluj</button>
+      </div>
+
+      <!-- KOMUNIKAT DTR (pojawia się przy pierwszym zapisie danego dnia) -->
+      <div class="dtr" id="panelDtr" style="display:none;">
+        <div class="krok" style="color:#fbbf24; margin-bottom:8px;">⚠️ Uwaga</div>
+        <p>Powyższe wytyczne nie zwalniają ze znajomości i stosowania wytycznych zawartych w DTR. O niepokojących zdarzeniach należy bezzwłocznie informować kierownictwo, zapotrzebowanie zgłaszać na bieżąco w opisie usterki.</p>
+        <button type="button" class="tak" id="btnDtrTak">Potwierdzam i zapisz</button>
+        <button type="button" class="anuluj" id="btnDtrNie">Anuluj</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="kartaHistoriiInline" style="display:none;"></div>
+  <details class="card" id="kartaHistorii" style="display:none;">
+    <summary>🕘 Historia maszyny</summary>
+    <div id="listaHistorii" style="margin-top:8px;"></div>
+  </details>
+</div>
+
+<script>
+  var PRZEGLADY = <?!= JSON.stringify(pobranePrzeglady || []).replace(/</g, '\\u003c') ?>;
+  var ZALOGOWANY_NAZWISKO = <?!= JSON.stringify(zalogowanyNazwisko || '').replace(/</g, '\\u003c') ?>;
+  var WYBRANE = <?!= JSON.stringify(wybraneId || '').replace(/</g, '\\u003c') ?>;
+  var PARAM_QR = <?!= JSON.stringify(parametrQR || '').replace(/</g, '\\u003c') ?>;
+  var BLAD = <?!= JSON.stringify(bladLadowania || '').replace(/</g, '\\u003c') ?>;
+
+  // ---- ustawienia, które można zmienić ----
+  var DTR_RAZ_DZIENNIE = true;   // false = komunikat DTR przy każdym przeglądzie
+  var OPIS_GWIAZDKI = 'kontrola wizualna: śruby, szczelność, osłony, uszkodzenia, aparatura, korozja'; // pusty tekst = bez przypisu
+  var START_PUNKTU = ['kontrola', 'czyszczenie', 'stan', 'sztywność', 'sprawdzanie', 'sprawdzenie', 'smarowanie', 'weryfikacja',
+    'kalibracja', 'szczelność', 'brak', 'napięcie', 'bieg', 'regulacja', 'dokręcenie', 'sprawność', 'naciąg', 'spuszczenie',
+    'spuszczanie', 'temp.'];
+
+  var tryb = 'dozrobienia';
+  var priorytet = 'Średni';
+  var wybranyId = '';
+  var oczekujacyZapis = null;
+  var zaznaczonePunkty = [];
+  var aktualnePunkty = [];
+  var TRYB_MASZYNY = !!(PARAM_QR && PARAM_QR.indexOf('PRZ-') !== 0);   // kod QR niesie ID URZĄDZENIA (np. 1.12)
+  var MASZYNA = null;
+  var PRACOWNICY = [];
+  var maszynaStoi = false;
+  var priorytetAwarii = 'Średni';
+  var USTERKI = [];
+  var GRUPY = [
+    { k: 'zalegly', l: '🚨 Zaległe' },
+    { k: 'dzis', l: '📅 Na dziś' },
+    { k: 'nadchodzacy', l: '📆 Najbliższe dni' },
+    { k: 'wykonany', l: '✅ Już rozliczone' }
+  ];
+
+  function $(id) { return document.getElementById(id); }
+  function norm(s) { return String(s || '').toLowerCase(); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function fmtData(d) { var p = String(d).split('-'); return p.length === 3 ? p[2] + '.' + p[1] : d; }
+  function znajdz(id) {
+    for (var i = 0; i < PRZEGLADY.length; i++) if (PRZEGLADY[i].idPrzegladu === id) return PRZEGLADY[i];
+    return null;
+  }
+  function termin(p) {
+    if (p.czyWykonany) return ['Rozliczony', 'b-wyk'];
+    if (p.dni < 0) return ['Zaległy ' + (-p.dni) + ' d', 'b-zal'];
+    if (p.dni === 0) return ['Dziś', 'b-dzis'];
+    return [fmtData(p.dataPlanowana) + ' · za ' + p.dni + ' d', 'b-nad'];
+  }
+  function komunikat(tekst, typ) {
+    var k = $('komunikat');
+    k.className = 'komunikat ' + (typ || '');
+    k.textContent = tekst;
+    if (tekst) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function bladRozl(tekst) {
+    var b = $('bladRozl');
+    b.textContent = tekst || '';
+    b.style.display = tekst ? 'block' : 'none';
+    if (tekst && b.scrollIntoView) b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function pamietaj(klucz, wartosc) { try { localStorage.setItem(klucz, wartosc); } catch (e) {} }
+  function odczytaj(klucz) { try { return localStorage.getItem(klucz) || ''; } catch (e) { return ''; } }
+
+  function dzisTekst() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function domyslnyCzas(cz) {
+    var c = norm(cz);
+    if (c.indexOf('codz') === 0) return '0,1';
+    if (c.indexOf('tydz') === 0 || c.indexOf('tygo') === 0) return '0,5';
+    if (c.indexOf('mies') === 0) return '1';
+    return '0,5';
+  }
+  function cmpId(a, b) {
+    var x = String(a).split('.'), y = String(b).split('.');
+    for (var i = 0; i < Math.max(x.length, y.length); i++) {
+      var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+  function cmpPrzegladow(a, b) {
+    return cmpId(a.idUrzadzenia, b.idUrzadzenia) || (a.dni - b.dni) || String(a.idPrzegladu).localeCompare(String(b.idPrzegladu));
+  }
+
+  // Zamienia opis czynności z karty na osobne punkty (czytelna lista zamiast jednego akapitu)
+  function punktyZakresu(zakres) {
+    var surowy = String(zakres || '').replace(/\s*\[DO WERYFIKACJI[^\]]*\]/gi, '');
+    // Punkty zapisane wprost (osobna linia w komórce, średnik albo •) – bierzemy je 1:1
+    var jawne = surowy.split(/\s*(?:;|\r?\n|•)\s*/).map(function (x) { return x.replace(/\s+/g, ' ').trim().replace(/\.$/, ''); })
+      .filter(function (x) { return x; });
+    if (jawne.length > 1) return jawne.map(function (x) { return x.charAt(0).toUpperCase() + x.slice(1); });
+    var s = surowy.replace(/\s+/g, ' ').trim().replace(/\.$/, '');
+    if (!s) return [];
+    var frs = [], cur = '', depth = 0;
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      if (ch === '(') depth++;
+      if (ch === ')') depth = Math.max(0, depth - 1);
+      if (ch === ',' && depth === 0) { frs.push(cur.trim()); cur = ''; } else cur += ch;
+    }
+    if (cur.trim()) frs.push(cur.trim());
+    var pts = [];
+    frs.forEach(function (f, idx) {
+      var w = f.split(' ')[0].toLowerCase();
+      if (idx === 0 || START_PUNKTU.indexOf(w) !== -1) pts.push(f); else pts[pts.length - 1] += ', ' + f;
+    });
+    return pts.map(function (p) { return p.charAt(0).toUpperCase() + p.slice(1); });
+  }
+
+  // ---------- DTR ----------
+  function dtrPotwierdzoneDzis() {
+    if (!DTR_RAZ_DZIENNIE) return false;
+    var el = $('wykonawca');
+    var w = el ? String(el.value || '').trim() : '';
+    return !!w && odczytaj('cmms_dtr') === dzisTekst() + '|' + w;
+  }
+  function odswiezDTR() {
+    var w = String(($('wykonawca') || {}).value || '').trim();
+    if (w && $('wykonawca').classList) $('wykonawca').classList.remove('pole-blad');
+    $('dtrStatus').textContent = dtrPotwierdzoneDzis() ? '✓ Komunikat DTR potwierdzony dziś (' + w + ')' : '';
+  }
+
+  // ---------- START ----------
+  function init() {
+    var d = new Date();
+    $('dzisiaj').textContent = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
+    google.script.run
+      .withSuccessHandler(ustawPracownikow)
+      .withFailureHandler(function () { ustawPracownikow([]); })
+      .pobierzPracownikow();
+
+    document.addEventListener('change', function (e) { if (e.target && e.target.id === 'wykonawca') odswiezDTR(); });
+    document.addEventListener('input', function (e) { if (e.target && e.target.id === 'wykonawca') odswiezDTR(); });
+    $('btnOpis').addEventListener('click', function () {
+      var ta = $('opis');
+      var otwarte = ta.style.display !== 'none';
+      ta.style.display = otwarte ? 'none' : 'block';
+      this.textContent = otwarte ? '＋ dodaj opis prac (opcjonalnie)' : '− ukryj opis prac';
+      if (!otwarte) ta.focus();
+    });
+    $('btnWroc').addEventListener('click', wroc);
+    $('btnOk').addEventListener('click', function () { probaZapisu(false); });
+    $('btnProblem').addEventListener('click', pokazProblem);
+    $('btnAnulujProblem').addEventListener('click', ukryjProblem);
+    $('btnWyslijProblem').addEventListener('click', function () { probaZapisu(true); });
+    $('btnDtrTak').addEventListener('click', potwierdzIZapisz);
+    $('btnDtrNie').addEventListener('click', anulujDtr);
+    $('problemPunkty').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-punkt]') : null;
+      if (b) przelaczPunkt(b.getAttribute('data-punkt'));
+    });
+    $('btnNastepna').addEventListener('click', function () {
+      var id = this.getAttribute('data-id');
+      $('nastepnaBox').style.display = 'none';
+      if (id) wybierz(id, true);
+    });
+
+    wypelnijObszary();
+
+    document.querySelectorAll('.chip').forEach(function (b) {
+      b.addEventListener('click', function () { tryb = this.getAttribute('data-tryb'); render(); });
+    });
+    document.querySelectorAll('.problem-box .prio button').forEach(function (b) {
+      b.addEventListener('click', function () { ustawPriorytet(this.getAttribute('data-p')); });
+    });
+    document.querySelectorAll('.prioA button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        priorytetAwarii = this.getAttribute('data-p');
+        document.querySelectorAll('.prioA button').forEach(function (x) { x.classList.toggle('active', x === b); });
+      });
+    });
+    document.querySelectorAll('.stoiBtn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        maszynaStoi = this.getAttribute('data-s') === 'TAK';
+        document.querySelectorAll('.stoiBtn').forEach(function (x) { x.classList.toggle('active', x === b); });
+      });
+    });
+    document.querySelectorAll('.zakladka').forEach(function (b) {
+      b.addEventListener('click', function () { ustawZakladke(this.getAttribute('data-widok')); });
+    });
+    $('formAwaria').addEventListener('submit', wyslijAwarie);
+    $('listaUsterek').addEventListener('click', klikUsterki);
+    $('lista').addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('.hist-btn') : null;
+      if (!btn) return;
+      e.stopPropagation();
+      var idUrz = btn.getAttribute('data-id-urz');
+      if (!idUrz) return;
+      pokazHistorieInline_(idUrz);
+    });
+    $('szukaj').addEventListener('input', render);
+    $('filtrObszar').addEventListener('change', function () { pamietaj('cmms_obszar', this.value); render(); });
+    $('btnOdswiez').addEventListener('click', odswiezListe);
+
+    if (BLAD) {
+      komunikat('❌ Nie udało się wczytać przeglądów: ' + BLAD, 'k-bl');
+    } else if (!TRYB_MASZYNY && !PRZEGLADY.length) {
+      komunikat('✅ Brak przeglądów do rozliczenia w najbliższych 14 dniach.', 'k-ok');
+    }
+
+    if (TRYB_MASZYNY) {
+      wlaczTrybMaszyny();
+      return;
+    }
+
+    if (WYBRANE && znajdz(WYBRANE)) wybierz(WYBRANE, false);
+    render();
+  }
+
+  // ---------- TRYB MASZYNY (skan kodu QR) ----------
+  function wlaczTrybMaszyny() {
+    tryb = 'wszystkie';
+    PRZEGLADY = PRZEGLADY.filter(function (p) { return norm(p.idUrzadzenia) === norm(PARAM_QR); });
+    ustawWidokMaszyny(true);
+    if (PRZEGLADY.length) {
+      pokazKarteMaszyny({ id: PRZEGLADY[0].idUrzadzenia, nazwa: PRZEGLADY[0].nazwaUrzadzenia, obszar: PRZEGLADY[0].obszar,
+                          czestotliwosc: PRZEGLADY[0].czestotliwosc });
+    }
+    $('lista').innerHTML = '<div class="pusto">Wczytywanie przeglądów maszyny…</div>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.maszyna) {
+          komunikat('⚠️ Nie rozpoznano maszyny o ID „' + PARAM_QR + '”. Pokazuję pełną listę przeglądów.', 'k-bl');
+          pokazWszystkieMaszyny();
+          return;
+        }
+        MASZYNA = res.maszyna;
+        PRZEGLADY = res.przeglady || [];
+        pokazKarteMaszyny(MASZYNA);
+        $('panelMaszyny').style.display = 'block';
+        wczytajUsterkiIHistorie();
+        if (!PRZEGLADY.length) {
+          komunikat('✅ Ta maszyna nie ma zaplanowanych przeglądów do zrobienia.', 'k-ok');
+        }
+        if (res.domyslny) wybierz(res.domyslny, false);
+        else render();
+      })
+      .withFailureHandler(function (err) {
+        komunikat('❌ Nie udało się wczytać przeglądów maszyny: ' + err.message, 'k-bl');
+        render();
+      })
+      .pobierzPrzegladyMaszyny(PARAM_QR);
+  }
+
+  function ustawWidokMaszyny(wlacz) {
+    TRYB_MASZYNY = wlacz;
+    $('filtryBox').style.display = wlacz ? 'none' : 'block';
+    $('btnOdswiez').style.display = wlacz ? 'none' : 'inline';
+    $('tytulKroku1').textContent = wlacz ? 'Przeglądy tej maszyny' : 'Wybierz maszynę';
+    if (!wlacz) {
+      $('kartaMaszyny').style.display = 'none';
+      $('panelMaszyny').style.display = 'none';
+      $('kartaHistorii').style.display = 'none';
+      ustawZakladke('przeglad');
+    }
+    ustawEkran();
+  }
+
+  function pokazKarteMaszyny(m) {
+    var k = $('kartaMaszyny');
+    k.innerHTML =
+      '<div class="etyk">📷 Zeskanowana maszyna</div>' +
+      '<div class="nazwa">' + esc(m.nazwa) + '</div>' +
+      '<div class="meta">ID ' + esc(m.id) + ' · ' + esc(m.obszar) + '</div>' +
+      '<button type="button" class="inna" id="btnInnaMaszyna">Inna maszyna – pokaż listę przeglądów</button>';
+    k.style.display = 'block';
+    $('btnInnaMaszyna').addEventListener('click', pokazWszystkieMaszyny);
+  }
+
+  function pokazWszystkieMaszyny() {
+    tryb = 'dozrobienia';
+    wybranyId = '';
+    ustawWidokMaszyny(false);
+    $('lista').innerHTML = '<div class="pusto">Wczytywanie…</div>';
+    odswiezListe();
+  }
+
+  function wypelnijObszary() {
+    var sel = $('filtrObszar');
+    var obecny = sel.value;
+    sel.innerHTML = '<option value="">Wszystkie</option>';
+    var obszary = [];
+    PRZEGLADY.forEach(function (p) { if (p.obszar && obszary.indexOf(p.obszar) < 0) obszary.push(p.obszar); });
+    obszary.sort().forEach(function (o) {
+      var opt = document.createElement('option');
+      opt.value = o; opt.textContent = o;
+      sel.appendChild(opt);
+    });
+    var zap = obecny || odczytaj('cmms_obszar');
+    sel.value = zap;
+    if (sel.value !== zap) sel.value = '';
+  }
+
+  // ---------- LISTA ----------
+  function filtrujBazowe() {
+    var q = norm($('szukaj').value).trim();
+    var ob = $('filtrObszar').value;
+    return PRZEGLADY.filter(function (p) {
+      if (ob && p.obszar !== ob) return false;
+      if (!q) return true;
+      return norm(p.nazwaUrzadzenia + ' ' + p.idUrzadzenia + ' ' + p.idPrzegladu + ' ' + p.obszar).indexOf(q) >= 0;
+    });
+  }
+  var DNI_TYG = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+  function nazwaDnia(p) {
+    var d = new Date(String(p.dataPlanowana) + 'T00:00:00');
+    if (isNaN(d.getTime())) return fmtData(p.dataPlanowana);
+    return DNI_TYG[d.getDay()] + ' ' + fmtData(p.dataPlanowana);
+  }
+  function etykietaDnia(kat, p) {
+    if (kat === 'zalegly') return '🚨 Zaległe · ' + nazwaDnia(p) + (p.dni === -1 ? ' (wczoraj)' : ' (' + (-p.dni) + ' dni temu)');
+    return '📆 ' + nazwaDnia(p) + (p.dni === 1 ? ' (jutro)' : ' (za ' + p.dni + ' dni)');
+  }
+  function terminLista(p) {
+    if (p.kategoria === 'nadchodzacy') return ['za ' + p.dni + ' d', 'b-nad'];
+    return termin(p);
+  }
+  function ulozWidoczne(bazowe) {
+    var w = bazowe.filter(function (p) {
+      if (tryb === 'wszystkie') return true;
+      if (tryb === 'dozrobienia') return p.kategoria === 'zalegly' || p.kategoria === 'dzis';
+      return p.kategoria === tryb;
+    });
+    var wynik = [];
+    GRUPY.forEach(function (g) {
+      var el = w.filter(function (p) { return p.kategoria === g.k; });
+      if (!el.length) return;
+      if (g.k === 'zalegly' || g.k === 'nadchodzacy') {
+        var dni = [];
+        el.forEach(function (p) { if (dni.indexOf(p.dni) < 0) dni.push(p.dni); });
+        dni.sort(function (a, b) { return a - b; });
+        dni.forEach(function (d) {
+          var czesc = el.filter(function (p) { return p.dni === d; }).sort(cmpPrzegladow);
+          wynik.push({ grupa: { k: g.k, l: etykietaDnia(g.k, czesc[0]) }, elementy: czesc });
+        });
+      } else {
+        wynik.push({ grupa: g, elementy: el.sort(cmpPrzegladow) });
+      }
+    });
+    return wynik;
+  }
+  function plaskaLista() {
+    var out = [];
+    ulozWidoczne(filtrujBazowe()).forEach(function (g) { g.elementy.forEach(function (p) { out.push(p); }); });
+    return out;
+  }
+
+  function render() {
+    var q = norm($('szukaj').value).trim();
+    var ob = $('filtrObszar').value;
+    var bazowe = filtrujBazowe();
+
+    var licz = { dozrobienia: 0, wszystkie: bazowe.length, zalegly: 0, dzis: 0, nadchodzacy: 0 };
+    bazowe.forEach(function (p) { if (licz[p.kategoria] !== undefined) licz[p.kategoria]++; });
+    licz.dozrobienia = licz.zalegly + licz.dzis;
+    Object.keys(licz).forEach(function (k) { $('c-' + k).textContent = licz[k]; });
+    document.querySelectorAll('.chip').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-tryb') === tryb);
+    });
+
+    var grupy = ulozWidoczne(bazowe);
+    var html = '';
+    grupy.forEach(function (g) {
+      html += '<div class="grupa">' + g.grupa.l + ' (' + g.elementy.length + ')</div>';
+      g.elementy.forEach(function (p) {
+        var t = terminLista(p);
+        html += '<div class="poz' + (p.idPrzegladu === wybranyId ? ' wybrany' : '') +
+                '" tabindex="0" role="button" data-id="' + esc(p.idPrzegladu) + '">' +
+                  (TRYB_MASZYNY
+                    ? '<div style="flex:1;min-width:0;"><div class="n">' + esc(p.czestotliwosc) + '</div>' +
+                      '<div class="m">termin ' + esc(p.dataPlanowana) + '</div></div>'
+                    : '<div style="flex:1;min-width:0;"><div class="n">' + esc(p.nazwaUrzadzenia) + '</div>' +
+                      '<div class="m">' + esc(p.idUrzadzenia) + ' · ' + esc(p.obszar) + ' · ' + esc(p.czestotliwosc) + '</div></div>' +
+                      '<button type="button" class="hist-btn" data-id-urz="' + esc(p.idUrzadzenia) + '" title="Historia">🕘</button>') +
+                  '<span class="badge ' + t[1] + '">' + t[0] + '</span>' +
+                '</div>';
+      });
+    });
+    $('lista').innerHTML = html || (TRYB_MASZYNY
+      ? '<div class="pusto">Brak przeglądów do rozliczenia dla tej maszyny.</div>'
+      : (tryb === 'dozrobienia' && !q && !ob
+          ? '<div class="pusto">✅ Nic więcej do zrobienia na dziś. Kolejne przeglądy: zakładka „14 dni”.</div>'
+          : '<div class="pusto">Brak przeglądów dla wybranych filtrów.</div>'));
+    document.querySelectorAll('.poz').forEach(function (b) {
+      b.addEventListener('click', function () { wybierz(this.getAttribute('data-id'), true); });
+      b.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wybierz(this.getAttribute('data-id'), true); }
+      });
+    });
+  }
+
+  // ---------- EKRAN WYBRANEJ MASZYNY ----------
+  function ustawEkran() {
+    var wybrany = !!wybranyId;
+    $('kartaRozl').style.display = wybrany ? 'block' : 'none';
+    $('kartaLista').style.display = (wybrany && !TRYB_MASZYNY) ? 'none' : 'block';
+    $('btnWroc').style.display = TRYB_MASZYNY ? 'none' : 'inline-block';
+  }
+
+  function zerujEkranRozl() {
+    oczekujacyZapis = null;
+    zaznaczonePunkty = [];
+    bladRozl('');
+    $('panelProblem').style.display = 'none';
+    $('panelDtr').style.display = 'none';
+    $('przyciskiWynik').style.display = 'flex';
+    $('opis').value = ''; $('opis').style.display = 'none'; $('btnOpis').textContent = '＋ dodaj opis prac (opcjonalnie)';
+    $('opisUsterki').value = ''; $('zalecenia').value = '';
+    ustawPriorytet('Średni');
+  }
+
+  function wybierz(id, przewin) {
+    wybranyId = id;
+    var p = znajdz(id);
+    if (!p) { wybranyId = ''; ustawEkran(); render(); return; }
+    zerujEkranRozl();
+    $('nastepnaBox').style.display = 'none';
+
+    var t = termin(p);
+    $('rozlNaglowek').innerHTML =
+      '<div class="rozl-nazwa">' + esc(p.nazwaUrzadzenia) + '</div>' +
+      '<div class="rozl-meta"><span>ID ' + esc(p.idUrzadzenia) + ' · ' + esc(p.obszar) + '</span>' +
+        '<span class="pill">' + esc(p.czestotliwosc) + '</span><span class="badge ' + t[1] + '">' + t[0] + '</span></div>' +
+      (p.czyWykonany ? '<div class="rozl-meta" style="color:#fca5a5;">⚠️ Ten przegląd jest już rozliczony – ponowny zapis doda drugi wpis.</div>' : '');
+
+    aktualnePunkty = punktyZakresu(p.zakres);
+    $('rozlPunkty').innerHTML = aktualnePunkty.length
+      ? aktualnePunkty.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('')
+      : '<li style="color:#94a3b8;">Brak opisu czynności dla tej maszyny – zgłoś to w UR.</li>';
+    var maGwiazdke = OPIS_GWIAZDKI && aktualnePunkty.some(function (x) { return x.indexOf('(*)') >= 0; });
+    $('rozlGwiazdka').textContent = maGwiazdke ? '(*) ' + OPIS_GWIAZDKI : '';
+
+    $('problemPunkty').innerHTML = aktualnePunkty.map(function (x) {
+      return '<button type="button" class="cp" data-punkt="' + esc(x) + '">' + esc(x) + '</button>';
+    }).join('');
+
+    $('czas').value = domyslnyCzas(p.czestotliwosc);
+    odswiezDTR();
+    ustawEkran();
+    render();
+    if (przewin) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function wroc() {
+    wybranyId = '';
+    zerujEkranRozl();
+    ustawEkran();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---------- ZAPIS PRZEGLĄDU ----------
+  function przelaczPunkt(txt) {
+    var i = zaznaczonePunkty.indexOf(txt);
+    if (i >= 0) zaznaczonePunkty.splice(i, 1); else zaznaczonePunkty.push(txt);
+    document.querySelectorAll('.cp').forEach(function (b) {
+      b.classList.toggle('active', zaznaczonePunkty.indexOf(b.getAttribute('data-punkt')) >= 0);
+    });
+  }
+  function zlozOpisUsterki() {
+    var tekst = String($('opisUsterki').value || '').trim();
+    var czesc = zaznaczonePunkty.length ? 'Dotyczy: ' + zaznaczonePunkty.join('; ') + '.' : '';
+    return (czesc + (czesc && tekst ? ' ' : '') + tekst).trim();
+  }
+  function pokazProblem() {
+    bladRozl('');
+    $('przyciskiWynik').style.display = 'none';
+    $('panelProblem').style.display = 'block';
+    $('panelProblem').scrollIntoView && $('panelProblem').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function ukryjProblem() {
+    $('panelProblem').style.display = 'none';
+    $('przyciskiWynik').style.display = 'flex';
+  }
+  function anulujDtr() {
+    var czekal = oczekujacyZapis;
+    oczekujacyZapis = null;
+    $('panelDtr').style.display = 'none';
+    if (czekal && czekal.hasUsterka) $('panelProblem').style.display = 'block';
+    else $('przyciskiWynik').style.display = 'flex';
+  }
+
+  function probaZapisu(hasUsterka) {
+    var wykonawca = String(($('wykonawca') || {}).value || '').trim();
+    var czas = parseFloat(String($('czas').value).replace(',', '.'));
+    if (!wybranyId) { bladRozl('Wybierz maszynę z listy.'); return; }
+    if (!wykonawca) { $('wykonawca').classList.add('pole-blad'); bladRozl('Wybierz, kto wykonuje przegląd (pole „Wykonawca”).'); return; }
+    if (!(czas > 0 && czas <= 24)) { bladRozl('Podaj czas pracy w godzinach, np. 0,5 albo 1.'); return; }
+    var opisUsterki = '';
+    if (hasUsterka) {
+      opisUsterki = zlozOpisUsterki();
+      if (!opisUsterki) { bladRozl('Zaznacz punkty, których dotyczy problem, albo opisz go własnymi słowami.'); return; }
+    }
+    bladRozl('');
+    if (!dtrPotwierdzoneDzis()) {
+      oczekujacyZapis = { hasUsterka: hasUsterka, opisUsterki: opisUsterki };
+      $('przyciskiWynik').style.display = 'none';
+      $('panelProblem').style.display = 'none';
+      $('panelDtr').style.display = 'block';
+      $('panelDtr').scrollIntoView && $('panelDtr').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    wykonajZapis(hasUsterka, opisUsterki, false);
+  }
+
+  function potwierdzIZapisz() {
+    if (!oczekujacyZapis) return;
+    var o = oczekujacyZapis;
+    oczekujacyZapis = null;
+    wykonajZapis(o.hasUsterka, o.opisUsterki, true);
+  }
+
+  function blokujPrzyciski(tak) {
+    ['btnOk', 'btnProblem', 'btnWyslijProblem', 'btnDtrTak'].forEach(function (id) { $(id).disabled = tak; });
+  }
+
+  function wykonajZapis(hasUsterka, opisUsterki, zapiszDTR) {
+    var wykonawca = String(($('wykonawca') || {}).value || '').trim();
+    var czas = parseFloat(String($('czas').value).replace(',', '.'));
+    pamietaj('cmms_wykonawca', wykonawca);
+    var p = znajdz(wybranyId);
+    var id = wybranyId;
+    var opisPrac = $('opis').value.trim();
+    var zalecenia = $('zalecenia').value.trim();
+    var prio = priorytet;
+    $('panelDtr').style.display = 'none';
+    blokujPrzyciski(true);
+    if (hasUsterka) $('panelProblem').style.display = 'block'; else $('przyciskiWynik').style.display = 'flex';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        blokujPrzyciski(false);
+        if (res && res.success === false) { bladRozl('❌ ' + res.message); return; }
+
+        if (zapiszDTR && DTR_RAZ_DZIENNIE) pamietaj('cmms_dtr', dzisTekst() + '|' + wykonawca);
+
+        var przed = plaskaLista().map(function (x) { return x.idPrzegladu; });
+        var idx = przed.indexOf(id);
+        PRZEGLADY = PRZEGLADY.filter(function (x) { return x.idPrzegladu !== id; });
+        wybranyId = '';
+        zerujEkranRozl();
+        $('czas').value = '0,5';
+        ustawEkran();
+        render();
+
+        komunikat('✅ Zapisano: ' + (p ? p.nazwaUrzadzenia : id) +
+                  (hasUsterka ? ' – usterka zgłoszona, kierownik dostał e-mail.' : '.'), 'k-ok');
+
+        var po = plaskaLista();
+        var nast = po.length ? po[Math.min(Math.max(idx, 0), po.length - 1)] : null;
+        if (nast) {
+          $('btnNastepna').setAttribute('data-id', nast.idPrzegladu);
+          $('btnNastepna').textContent = (TRYB_MASZYNY ? 'Następny przegląd tej maszyny: ' + nast.czestotliwosc : 'Następna: ' + nast.nazwaUrzadzenia) + ' →';
+          $('nastepnaBox').style.display = 'block';
+        } else {
+          $('nastepnaBox').style.display = 'none';
+          if (TRYB_MASZYNY) komunikat('✅ Zapisano. Ta maszyna nie ma już przeglądów do zrobienia – możesz zeskanować kolejną.', 'k-ok');
+        }
+        if (TRYB_MASZYNY) wczytajUsterkiIHistorie();
+      })
+      .withFailureHandler(function (err) {
+        blokujPrzyciski(false);
+        bladRozl('❌ Nie udało się zapisać (brak zasięgu?). Spróbuj jeszcze raz – nic nie zostało utracone. (' + err.message + ')');
+      })
+      .zapiszRozliczenieMobile({
+        przegladId: id,
+        wykonawca: wykonawca,
+        czas: czas,
+        opis: opisPrac,
+        hasUsterka: hasUsterka,
+        priorytet: prio,
+        opisUsterki: opisUsterki,
+        zalecenia: zalecenia,
+        potwierdzenieDTR: true
+      });
+  }
+
+  function ustawPriorytet(p) {
+    priorytet = p;
+    document.querySelectorAll('.problem-box .prio button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-p') === p); });
+  }
+
+  function odswiezListe() {
+    $('btnOdswiez').textContent = '↻ wczytywanie…';
+    google.script.run
+      .withSuccessHandler(function (dane) {
+        PRZEGLADY = dane || [];
+        $('btnOdswiez').textContent = '↻ odśwież';
+        if (wybranyId && !znajdz(wybranyId)) { wybranyId = ''; zerujEkranRozl(); ustawEkran(); }
+        wypelnijObszary();
+        render();
+      })
+      .withFailureHandler(function (err) {
+        $('btnOdswiez').textContent = '↻ odśwież';
+        komunikat('❌ Nie udało się odświeżyć listy: ' + err.message, 'k-bl');
+      })
+      .pobierzDaneDoFormularzaMobile();
+  }
+
+  // ---------- PRACOWNICY ----------
+  function ustawPracownikow(lista) {
+    PRACOWNICY = lista || [];
+    var zapamietany = odczytaj('cmms_wykonawca');
+    var stary = $('wykonawca');
+    if (!PRACOWNICY.length) {
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.id = 'wykonawca'; inp.placeholder = 'Imię i nazwisko';
+      inp.value = zapamietany;
+      stary.parentNode.replaceChild(inp, stary);
+      $('zglaszajacy').value = zapamietany;
+      odswiezDTR();
+      return;
+    }
+    stary.innerHTML = opcjeOsob();
+    var doWyboru = PRACOWNICY.indexOf(zapamietany) !== -1 ? zapamietany
+                 : (ZALOGOWANY_NAZWISKO && PRACOWNICY.indexOf(ZALOGOWANY_NAZWISKO) !== -1 ? ZALOGOWANY_NAZWISKO : '');
+    if (doWyboru) stary.value = doWyboru;
+    $('poleZglaszajacy').innerHTML = '<select id="zglaszajacy">' + opcjeOsob() + '</select>';
+    if (doWyboru) $('zglaszajacy').value = doWyboru;
+    odswiezDTR();
+  }
+  function opcjeOsob() {
+    return '<option value="">— wybierz —</option>' +
+      PRACOWNICY.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
+  }
+  // Pole wyboru osoby do obsługi usterki (lista albo tekst, jeśli listy brak)
+  function poleOsoby(id) {
+    var zap = odczytaj('cmms_wykonawca');
+    if (!PRACOWNICY.length) return '<input type="text" id="' + id + '" placeholder="Kto obsługuje?" value="' + esc(zap) + '">';
+    return '<select id="' + id + '">' + PRACOWNICY.map(function (n) {
+      return '<option' + (n === zap ? ' selected' : '') + '>' + esc(n) + '</option>';
+    }).join('') + '</select>';
+  }
+
+  // ---------- ZAKŁADKI, AWARIE, USTERKI, HISTORIA ----------
+  function ustawZakladke(w) {
+    document.querySelectorAll('.zakladka').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-widok') === w); });
+    $('widokPrzeglad').style.display = (w === 'przeglad') ? 'block' : 'none';
+    $('formAwaria').style.display = (w === 'awaria') ? 'block' : 'none';
+  }
+
+  function wczytajUsterkiIHistorie() {
+    if (!MASZYNA) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        USTERKI = (res && res.otwarte) || [];
+        renderUsterki();
+        renderHistoria((res && res.historia) || []);
+      })
+      .withFailureHandler(function (err) { console.log(err); })
+      .pobierzUsterkiIHistorieMaszyny(MASZYNA.id);
+  }
+
+  function renderUsterki() {
+    $('lUsterek').textContent = USTERKI.length;
+    $('kartaUsterek').style.display = USTERKI.length ? 'block' : 'none';
+    $('listaUsterek').innerHTML = USTERKI.map(function (u) {
+      var status = u.status === 'W trakcie'
+        ? '<span class="badge b-trakcie">🔧 W trakcie' + (u.osoba ? ' · ' + esc(u.osoba) : '') + '</span>'
+        : '<span class="badge b-zgl">Zgłoszona</span>';
+      return '<div class="ust" data-id="' + esc(u.id) + '">' +
+        '<div class="gora">' + status +
+          (u.stoi ? '<span class="badge b-stoi">⛔ STOI</span>' : '') +
+          '<span class="badge b-prio">' + esc(u.priorytet || 'Średni') + '</span></div>' +
+        '<div class="opis">' + esc(u.opis) + '</div>' +
+        '<div class="meta">' + esc(u.data) + ' · zgłosił: ' + esc(u.zglaszajacy) + '</div>' +
+        '<div class="akcje"><button type="button" data-akcja="pokaz">Obsłuż usterkę</button></div>' +
+        '<div class="obsluga">' +
+          '<label style="margin-top:0;">Kto?</label>' + poleOsoby('os-' + u.id) +
+          '<label>Co zostało zrobione? <span style="opacity:.7">(przy zamykaniu)</span></label>' +
+          '<textarea id="op-' + u.id + '" rows="2" placeholder="Np. wymieniono łożysko, dokręcono…"></textarea>' +
+          '<div class="akcje">' +
+            (u.status !== 'W trakcie' ? '<button type="button" data-akcja="w_trakcie">🔧 W trakcie</button>' : '') +
+            '<button type="button" data-akcja="usunieta" style="border-color:var(--ok);color:#6ee7b7;">✅ Usunięta</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function klikUsterki(e) {
+    var btn = e.target.closest('button[data-akcja]');
+    if (!btn) return;
+    var box = btn.closest('.ust');
+    var id = box.getAttribute('data-id');
+    var akcja = btn.getAttribute('data-akcja');
+    if (akcja === 'pokaz') {
+      box.querySelector('.obsluga').style.display = 'block';
+      btn.parentNode.style.display = 'none';
+      return;
+    }
+    var osoba = (document.getElementById('os-' + id) || {}).value || '';
+    var opis = (document.getElementById('op-' + id) || {}).value || '';
+    if (!osoba.trim()) { komunikat('Wybierz, kto obsługuje usterkę.', 'k-bl'); return; }
+    if (akcja === 'usunieta' && !opis.trim()) { komunikat('Opisz, co zostało zrobione.', 'k-bl'); return; }
+    btn.disabled = true;
+    pamietaj('cmms_wykonawca', osoba.trim());
+    google.script.run
+      .withSuccessHandler(function (res) {
+        btn.disabled = false;
+        if (!res || !res.success) { komunikat('❌ ' + ((res && res.message) || 'Nie zapisano.'), 'k-bl'); return; }
+        komunikat('✅ ' + res.message, 'k-ok');
+        wczytajUsterkiIHistorie();
+      })
+      .withFailureHandler(function (err) { btn.disabled = false; komunikat('❌ Błąd: ' + err.message, 'k-bl'); })
+      .zmienStatusUsterki({ idUsterki: id, akcja: akcja, osoba: osoba.trim(), opisNaprawy: opis.trim() });
+  }
+
+  function renderHistoria(lista) {
+    $('kartaHistorii').style.display = MASZYNA ? 'block' : 'none';
+    $('listaHistorii').innerHTML = lista.length ? lista.map(function (h) {
+      return '<div class="hist"><span class="kropka" style="background:' + (h.ok ? 'var(--ok)' : 'var(--danger)') + '"></span>' +
+        '<div><div><b>' + esc(h.rodzaj) + '</b> · ' + esc(String(h.data).substring(0, 16)) + '</div>' +
+        (h.opis ? '<div style="color:var(--muted);font-size:.82rem;">' + esc(h.opis) + '</div>' : '') +
+        (h.kto ? '<div style="color:var(--muted);font-size:.78rem;">' + esc(h.kto) + '</div>' : '') +
+        '</div></div>';
+    }).join('') : '<div class="pusto">Brak wpisów w historii tej maszyny.</div>';
+  }
+
+  function wyslijAwarie(e) {
+    e.preventDefault();
+    var kto = $('zglaszajacy').value.trim();
+    var opis = $('opisAwarii').value.trim();
+    var bledy = [];
+    if (!kto) bledy.push('wybierz zgłaszającego');
+    if (!opis) bledy.push('opisz, co się dzieje');
+    if (bledy.length) { komunikat('Uzupełnij: ' + bledy.join(', ') + '.', 'k-bl'); return; }
+
+    pamietaj('cmms_wykonawca', kto);
+    var btn = $('btnAwaria');
+    btn.disabled = true;
+    btn.textContent = 'Wysyłanie…';
+    google.script.run
+      .withSuccessHandler(function (res) {
+        btn.disabled = false;
+        btn.textContent = '🚨 Wyślij zgłoszenie awarii';
+        if (!res || !res.success) { komunikat('❌ ' + ((res && res.message) || 'Nie wysłano.'), 'k-bl'); return; }
+        komunikat('✅ ' + res.message + (maszynaStoi ? ' Kierownik dostał informację, że maszyna stoi.' : ''), 'k-ok');
+        $('opisAwarii').value = ''; $('czesciAwarii').value = '';
+        wczytajUsterkiIHistorie();
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false;
+        btn.textContent = '🚨 Wyślij zgłoszenie awarii';
+        komunikat('❌ Błąd: ' + err.message, 'k-bl');
+      })
+      .zglosAwarie({
+        idUrzadzenia: MASZYNA.id,
+        zglaszajacy: kto,
+        opis: opis,
+        zalecenia: $('czesciAwarii').value.trim(),
+        priorytet: priorytetAwarii,
+        maszynaStoi: maszynaStoi
+      });
+  }
+
+  function pokazHistorieInline_(idUrz) {
+    var panel = $('kartaHistoriiInline');
+    panel.innerHTML = '<div class="pusto">Wczytywanie historii…</div>';
+    panel.style.display = 'block';
+    panel.scrollIntoView && panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    google.script.run
+      .withSuccessHandler(function (res) {
+        var h = (res && res.historia) || [];
+        var o = (res && res.otwarte) || [];
+        var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+          '<span style="font-weight:700;">' + esc(idUrz) + ' – historia i usterki</span>' +
+          '<button type="button" class="odswiez" id="btnZamknijHist">✕ zamknij</button></div>';
+        if (o.length) {
+          html += '<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">⚠️ Otwarte usterki (' + o.length + ')</div>';
+          o.forEach(function (u) {
+            html += '<div class="ust" style="margin-bottom:6px;"><div class="gora">' +
+              '<span class="badge b-zgl">' + esc(u.status) + '</span>' +
+              (u.stoi ? '<span class="badge b-stoi">⛔ STOI</span>' : '') +
+              '<span class="badge b-prio">' + esc(u.priorytet) + '</span></div>' +
+              '<div class="opis">' + esc(u.opis) + '</div>' +
+              '<div class="meta">' + esc(u.data) + ' · ' + esc(u.zglaszajacy) + '</div></div>';
+          });
+        }
+        if (h.length) {
+          html += '<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin:10px 0 6px;">🕘 Ostatnie zdarzenia</div>';
+          h.forEach(function (e2) {
+            html += '<div class="hist"><span class="kropka" style="background:' + (e2.ok ? 'var(--ok)' : 'var(--danger)') + '"></span>' +
+              '<div><div><b>' + esc(e2.rodzaj) + '</b> · ' + esc(String(e2.data).substring(0, 16)) + '</div>' +
+              (e2.opis ? '<div style="color:var(--muted);font-size:.82rem;">' + esc(e2.opis) + '</div>' : '') +
+              '<div style="color:var(--muted);font-size:.78rem;">' + esc(e2.kto) + '</div></div></div>';
+          });
+        }
+        if (!o.length && !h.length) html += '<div class="pusto">Brak historii dla tej maszyny.</div>';
+        panel.innerHTML = html;
+        $('btnZamknijHist').addEventListener('click', function () {
+          panel.style.display = 'none'; panel.innerHTML = '';
+        });
+      })
+      .withFailureHandler(function (err) {
+        $('kartaHistoriiInline').innerHTML = '<div class="pusto">Błąd: ' + esc(err.message) + '</div>';
+      })
+      .pobierzUsterkiIHistorieMaszyny(idUrz);
+  }
+
+  init();
+</script>
+</body>
+</html>
