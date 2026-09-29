@@ -21,6 +21,11 @@
  *  - Rejestr: wpisy archiwalne wyszarzone zamiast "- | [⚠️ ID historyczne...]" w Uwagach.
  *  - Formularz: brak dublowania kolumn przy przebudowie, ochrona przed podwójnym zapisem odpowiedzi.
  *  - Ręczne zmiany w harmonogramie synchronizują się między arkuszem zbiorczym i miesięcznym.
+ *
+ * V4.8 - INTERFEJS PRZEGLĄDU NA TELEFON I LAPTOP:
+ *  - FormularzMobile.html: układ 1/2/3 kolumny wg szerokości ekranu, checklista, historia maszyny obok przeglądu.
+ *  - pobierzStatystykiPrzegladow(), limit w pobierzUsterkiIHistorieMaszyny(), menu: otwórz aplikację w nowej karcie.
+ *  - Ucieczka danych w szablonach HTML i treści e-maili.
  */
 
 // KONFIGURACJA GLOBALNA
@@ -197,6 +202,7 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('⚙️ CMMS System')
     .addItem('📝 Otwórz formularz rozliczenia', 'pokazFormularzPrzegladu')
+    .addItem('🖥️ Otwórz aplikację przeglądów (pełny ekran)', 'otworzAplikacjePrzegladow')
     .addItem('📍 Przejdź do dzisiejszych przeglądów', 'przejdzDoDzisiaj')
     .addItem('📊 Utwórz / Odśwież Dashboard CMMS', 'utworzDashboardCMMS')
     .addItem('🎨 Pełne Uporządkowanie i Formatowanie Arkuszy', 'przygotujSrodowiskoCMMS')
@@ -1197,11 +1203,11 @@ function zapiszRozliczenie(payload) {
             "<h2 style='color: #991b1b; margin-top: 0;'>⚠️ Wykryto usterkę / awarię podczas przeglądu (NOK)</h2>" +
             "<hr style='border: 0; border-top: 1px solid #fca5a5;' />" +
             "<p><b>ID Usterki:</b> " + idUsterki + "</p>" +
-            "<p><b>ID Przeglądu:</b> " + idSzukane + "</p>" +
-            "<p><b>Urządzenie:</b> " + (payload.nazwaUrzadzenia || "-") + " [" + (payload.idUrzadzenia || "-") + "] (" + (payload.obszar || "-") + ")</p>" +
-            "<p><b>Zgłaszający / Wykonawca:</b> " + payload.wykonawca + "</p>" +
-            "<p><b>Priorytet:</b> <span style='color: #dc2626; font-weight: bold;'>" + priorytetTxt + "</span></p>" +
-            "<p><b>Opis usterki:</b> <span style='color: #b91c1c; font-weight: bold;'>" + (payload.opisUsterki || "Brak opisu") + "</span></p>" +
+            "<p><b>ID Przeglądu:</b> " + escHtml_(idSzukane) + "</p>" +
+            "<p><b>Urządzenie:</b> " + escHtml_(payload.nazwaUrzadzenia || "-") + " [" + escHtml_(payload.idUrzadzenia || "-") + "] (" + escHtml_(payload.obszar || "-") + ")</p>" +
+            "<p><b>Zgłaszający / Wykonawca:</b> " + escHtml_(payload.wykonawca) + "</p>" +
+            "<p><b>Priorytet:</b> <span style='color: #dc2626; font-weight: bold;'>" + escHtml_(priorytetTxt) + "</span></p>" +
+            "<p><b>Opis usterki:</b> <span style='color: #b91c1c; font-weight: bold;'>" + escHtml_(payload.opisUsterki || "Brak opisu") + "</span></p>" +
             "<p style='font-size: 11px; color: #6b7280; margin-top: 20px;'>Wiadomość wygenerowana automatycznie przez system CMMS Holcim.</p>" +
           "</div>";
 
@@ -3358,10 +3364,10 @@ function zglosAwarie(p) {
       var html =
         "<div style='font-family:Arial,sans-serif;padding:20px;border:2px solid #ef4444;border-radius:8px;background:#fef2f2;'>" +
           "<h2 style='color:#991b1b;margin-top:0;'>" + (stoi ? "⛔ MASZYNA STOI – " : "🚨 ") + "zgłoszono awarię</h2>" +
-          "<p><b>Maszyna:</b> " + urz.nazwa + " [" + urz.id + "] (" + urz.obszar + ")</p>" +
-          "<p><b>Zgłaszający:</b> " + kto + "</p>" +
-          "<p><b>Priorytet:</b> <span style='color:#dc2626;font-weight:bold;'>" + prio + "</span></p>" +
-          "<p><b>Opis:</b> " + opis + "</p>" +
+          "<p><b>Maszyna:</b> " + escHtml_(urz.nazwa) + " [" + escHtml_(urz.id) + "] (" + escHtml_(urz.obszar) + ")</p>" +
+          "<p><b>Zgłaszający:</b> " + escHtml_(kto) + "</p>" +
+          "<p><b>Priorytet:</b> <span style='color:#dc2626;font-weight:bold;'>" + escHtml_(prio) + "</span></p>" +
+          "<p><b>Opis:</b> " + escHtml_(opis) + "</p>" +
           "<p style='font-size:11px;color:#6b7280;'>ID zgłoszenia: " + id + " · wiadomość z systemu CMMS Holcim</p>" +
         "</div>";
       MailApp.sendEmail({
@@ -3438,7 +3444,7 @@ function zmienStatusUsterki(p) {
 /**
  * Otwarte usterki i ostatnie zdarzenia (przeglądy + usterki) jednej maszyny - do widoku po skanie QR.
  */
-function pobierzUsterkiIHistorieMaszyny(idUrzadzenia) {
+function pobierzUsterkiIHistorieMaszyny(idUrzadzenia, limit) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var klucz = normalizujId_(idUrzadzenia);
   var wynik = { otwarte: [], historia: [] };
@@ -3476,7 +3482,7 @@ function pobierzUsterkiIHistorieMaszyny(idUrzadzenia) {
 
   wynik.otwarte.sort(function (a, b) { return a.data < b.data ? 1 : -1; });
   wynik.historia.sort(function (a, b) { return a.data < b.data ? 1 : -1; });
-  wynik.historia = wynik.historia.slice(0, 6);
+  wynik.historia = wynik.historia.slice(0, Math.min(50, Math.max(1, parseInt(limit, 10) || 6)));
   return wynik;
 }
 /* ==========================================================================
@@ -4225,4 +4231,59 @@ function generujHarmonogramV2_(spreadsheetObj) {
   uwzglednijSwieta_(sheetHarm);
   formatujArkuszHarmonogramu(sheetHarm);
   Logger.log("Harmonogram V2: " + harmonogramRows.length + " pozycji");
+}
+
+
+/* ==========================================================================
+ *  APLIKACJA PRZEGLĄDÓW: STATYSTYKI DO NAGŁÓWKA + OTWIERANIE Z ARKUSZA (V4.8)
+ * ========================================================================== */
+
+/**
+ * Liczniki do kafli w nagłówku aplikacji (laptop): rozliczenia z dzisiejszą datą w Rejestrze,
+ * otwarte usterki i maszyny, które stoją. Czyta tylko potrzebne kolumny.
+ */
+function pobierzStatystykiPrzegladow() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dzisStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
+  var wynik = { rozliczoneDzis: 0, otwarteUsterki: 0, maszynyStoja: 0 };
+
+  var rej = ss.getSheetByName("3. Rejestr Przeglądów");
+  if (rej && rej.getLastRow() > 1) {
+    rej.getRange(2, 6, rej.getLastRow() - 1, 1).getDisplayValues().forEach(function (r) {
+      if (String(r[0]).trim().substring(0, 10) === dzisStr) wynik.rozliczoneDzis++;
+    });
+  }
+
+  var sh = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
+  if (sh && sh.getLastRow() > 1) {
+    var kol = Math.max(9, Math.min(14, sh.getLastColumn()));
+    sh.getRange(2, 1, sh.getLastRow() - 1, kol).getDisplayValues().forEach(function (r) {
+      if (!String(r[0]).trim() || String(r[8]).trim() === "Usunięta") return;
+      wynik.otwarteUsterki++;
+      if (String(r[13] || "").trim().toUpperCase() === "TAK") wynik.maszynyStoja++;
+    });
+  }
+  return wynik;
+}
+
+/**
+ * Otwiera aplikację przeglądów (Web App) w nowej karcie przeglądarki - na laptopie
+ * wykorzystuje cały ekran zamiast okna dialogowego w arkuszu.
+ */
+function otworzAplikacjePrzegladow() {
+  var url = pobierzUrlAplikacjiLubZapytaj_();
+  if (!url) return;
+  var html = HtmlService.createHtmlOutput(
+    '<div style="font-family:Arial,sans-serif;padding:6px 4px;">' +
+      '<p style="font-size:14px;color:#334155;margin:0 0 12px;">Aplikacja przeglądów otwiera się w nowej karcie.</p>' +
+      '<a id="lnk" href="' + escHtml_(url) + '" target="_blank" rel="noopener" ' +
+        'style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold;">' +
+        'Otwórz aplikację →</a>' +
+      '<p style="font-size:12px;color:#64748b;margin-top:12px;">Jeśli karta się nie otworzyła, kliknij przycisk powyżej ' +
+        '(przeglądarka mogła zablokować wyskakujące okno).</p>' +
+    '</div>' +
+    '<script>var w = window.open(' + JSON.stringify(url).replace(/</g, "\\u003c") + ', "_blank");' +
+    'if (w) google.script.host.close();</script>'
+  ).setWidth(380).setHeight(190);
+  SpreadsheetApp.getUi().showModalDialog(html, "🖥️ Aplikacja przeglądów");
 }

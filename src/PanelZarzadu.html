@@ -77,8 +77,8 @@
 </div>
 
 <script>
-  var DANE = <?!= dane ? JSON.stringify(dane).replace(/</g, '\u003c') : 'null' ?>;
-  var BLAD = <?!= JSON.stringify(blad || '').replace(/</g, '\u003c') ?>;
+  var DANE = <?!= dane ? JSON.stringify(dane).replace(/</g, '\\u003c') : 'null' ?>;
+  var BLAD = <?!= JSON.stringify(blad || '').replace(/</g, '\\u003c') ?>;
   var DEMO = <?!= demo ? 'true' : 'false' ?>;
 
   function esc(s) {

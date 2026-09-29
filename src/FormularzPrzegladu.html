@@ -222,11 +222,11 @@
   </div>
 
   <script>
-    var PRZEGLADY = <?!= JSON.stringify(pobranePrzeglady || []).replace(/</g, '\u003c') ?>;
-    var WYBRANE = <?!= JSON.stringify((dane && dane.idPrzegladu) || '').replace(/</g, '\u003c') ?>;
-    var OSTATNI_WYKONAWCA = <?!= JSON.stringify((dane && dane.ostatniWykonawca) || '').replace(/</g, '\u003c') ?>;
+    var PRZEGLADY = <?!= JSON.stringify(pobranePrzeglady || []).replace(/</g, '\\u003c') ?>;
+    var WYBRANE = <?!= JSON.stringify((dane && dane.idPrzegladu) || '').replace(/</g, '\\u003c') ?>;
+    var OSTATNI_WYKONAWCA = <?!= JSON.stringify((dane && dane.ostatniWykonawca) || '').replace(/</g, '\\u003c') ?>;
 
-    var MASZYNA_ARK = <?!= JSON.stringify(wybranaMaszyna || '').replace(/</g, '\u003c') ?>;
+    var MASZYNA_ARK = <?!= JSON.stringify(wybranaMaszyna || '').replace(/</g, '\\u003c') ?>;
     var tryb = 'wszystkie', wynik = 'OK', priorytet = 'Średni', wybranyId = '';
     var trybGlowny = 'przeglad', MASZYNY = [], PRACOWNICY = [], wybranaMaszynaId = '';
     var GRUPY = [
