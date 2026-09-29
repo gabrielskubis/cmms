@@ -66,6 +66,18 @@ Warunek: Google podaje mail tylko, gdy aplikację wdrożyło konto z tej samej d
 - **Aktualne usterki**: wszystkie otwarte, filtry status (zgłoszone / w trakcie / stoi), priorytet, obszar, wyszukiwarka; kto obsługuje, ile dni czeka.
 - **Historia maszyn**: lista 110 maszyn wg obszaru z wyszukiwarką i licznikami otwartych usterek; karta maszyny — liczba przeglądów i NOK, usterki, łączny przestój, następny przegląd, otwarte usterki i oś czasu przeglądów/awarii (z opisem naprawy) z filtrem. Kliknięcie maszyny w innych tabelach przenosi do jej historii.
 
+## 1c. Nawigacja bez ślepych zaułków (wersja 4.10.1)
+
+- **Systemowe „wstecz”** (gest na telefonie, przycisk w przeglądarce) cofa do poprzedniego ekranu aplikacji: przegląd → lista, zakładka Historia/Awaria → Przegląd, usterka → lista usterek → Do zrobienia, lista po „Inna maszyna” → maszyna z QR. Wcześniej wychodziło z aplikacji. Na laptopie „wstecz” wraca do poprzednio oglądanego przeglądu. Automatyczne przejście do następnego przeglądu po zapisie nie dokłada kroku, więc „wstecz” nie wraca do już zapisanego.
+- **Ochrona przed utratą danych**: wyjście z przeglądu z zaznaczoną checklistą lub wpisanym opisem (wstecz, ⌂, inny przegląd, „Wróć”) pyta „Wyjść bez zapisywania?”.
+- **Przycisk powrotu mówi, dokąd prowadzi** („Wróć do listy” / „Wróć do usterek”).
+- **Błędy mają wyjście**: nieudane wczytanie listy — trwały komunikat „Spróbuj ponownie” i informacja w liście (zamiast mylącego „Nic do zrobienia”); nieudany skan QR — przycisk „Pokaż wszystkie przeglądy”; nieudany zapis — komunikat, dane zostają, przyciski znów aktywne.
+- **Lista obszarów na telefonie**: dotknięcie obok zamyka listę i nie klika przeglądu pod spodem (zasłona).
+- **Esc na laptopie**: zamyka panel problemu / DTR także z pola tekstowego; w wyszukiwarce czyści frazę.
+- **Panel Zarządu**: „wstecz” przełącza zakładki i oglądane maszyny; linki z zakładką (`…?panel=zarzad#usterki`, `#historia=1.12`) otwierają właściwy widok.
+
+Sprawdzone automatycznie (przeglądarka, telefon 390 px i laptop 1600 px, dane z arkusza Nowa Huta, atrapa serwera): 16 kroków nawigacji na telefonie, 13 na laptopie, 4 w trybie QR, 22 stany błędów i paneli pośrednich, 11 w Panelu Zarządu.
+
 ## 2. Propozycje kolejnych usprawnień
 
 Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do którego celu SMART się przyczynia.

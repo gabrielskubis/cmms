@@ -189,7 +189,10 @@
                  'Kompresory': '#10b981', 'Sprężone Powietrze': '#06b6d4', 'Rozdzielnie El.': '#ef4444' };
   var fUst = { status: '', prio: '', obszar: '', q: '' };
   var wybranaMaszyna = '';
-  var HIST = null, filtrHist = '';
+  var HISTM = null, filtrHist = '';
+  // przycisk / gest „wstecz” przełącza zakładki i maszyny zamiast zamykać panel
+  var HIST = (window.google && google.script && google.script.history) || null;
+  var przywracanie = false, ostatniHash = 'przeglad';
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -206,7 +209,14 @@
   function ustawWidok(w, bezHash) {
     document.querySelectorAll('.zakladka').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-w') === w); });
     ['przeglad', 'usterki', 'historia'].forEach(function (k) { $('w-' + k).hidden = k !== w; });
-    if (!bezHash) try { history.replaceState(null, '', '#' + w + (w === 'historia' && wybranaMaszyna ? '=' + encodeURIComponent(wybranaMaszyna) : '')); } catch (e) {}
+    if (!bezHash && !przywracanie) {
+      var st = { w: w, m: w === 'historia' ? wybranaMaszyna : '' };
+      var hash = w + (st.m ? '=' + encodeURIComponent(st.m) : '');
+      if (hash !== ostatniHash) {
+        ostatniHash = hash;
+        try { if (HIST) HIST.push(st, null, hash); } catch (e) {}
+      }
+    }
     window.scrollTo(0, 0);
   }
 
@@ -338,7 +348,7 @@
   }
   function pokazMaszyne(id) {
     wybranaMaszyna = id;
-    HIST = null; filtrHist = '';
+    HISTM = null; filtrHist = '';
     ustawWidok('historia');
     renderListaMaszyn();
     var el = document.querySelector('.maszyna-poz.active');
@@ -348,13 +358,13 @@
       .withSuccessHandler(function (res) {
         if (wybranaMaszyna !== id) return;
         if (!res) { $('kartaMaszyny').innerHTML = '<div class="pusto">Nie znaleziono maszyny ' + esc(id) + '.</div>'; return; }
-        HIST = res; renderKartaMaszyny();
+        HISTM = res; renderKartaMaszyny();
       })
       .withFailureHandler(function (err) { $('kartaMaszyny').innerHTML = '<div class="blad">Błąd: ' + esc(err.message) + '</div>'; })
       .pobierzHistorieMaszynyZarzad(id, DEMO);
   }
   function renderKartaMaszyny() {
-    var r = HIST, m = r.maszyna, s = r.statystyki;
+    var r = HISTM, m = r.maszyna, s = r.statystyki;
     var html = '<h3>' + esc(m.nazwa) + '</h3>' +
       '<div class="meta"><span class="id">ID ' + esc(m.id) + '</span> · <span class="kropka" style="background:' + kolor(m.obszar) + '"></span>' + esc(m.obszar) +
         (m.czestotliwosc ? ' · przeglądy: ' + esc(m.czestotliwosc) : '') + '</div>' +
@@ -420,7 +430,7 @@
       var m = e.target.closest('[data-maszyna]');
       if (m) { pokazMaszyne(m.getAttribute('data-maszyna')); return; }
       var h = e.target.closest('#fHist button');
-      if (h && HIST) { filtrHist = h.getAttribute('data-v'); renderKartaMaszyny(); }
+      if (h && HISTM) { filtrHist = h.getAttribute('data-v'); renderKartaMaszyny(); }
     });
     $('fStatus').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; fUst.status = b.getAttribute('data-v'); ustawSeg('fStatus', fUst.status); renderUsterki(); });
     $('fPrio').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; fUst.prio = b.getAttribute('data-v'); ustawSeg('fPrio', fUst.prio); renderUsterki(); });
@@ -428,10 +438,34 @@
     $('fSzukaj').addEventListener('input', function () { fUst.q = norm(this.value).trim(); renderUsterki(); });
     $('szukajMaszyny').addEventListener('input', renderListaMaszyn);
 
-    // link z zakładką: #usterki, #historia=1.12
-    var hash = decodeURIComponent(String(location.hash || '').replace(/^#/, ''));
-    if (hash.indexOf('historia=') === 0) pokazMaszyne(hash.substring(9));
-    else if (hash === 'usterki' || hash === 'historia') ustawWidok(hash, true);
+    // link z zakładką: …?panel=zarzad#usterki albo #historia=1.12 (adres czytany przez google.script.url)
+    function otworzZHasha(hash) {
+      hash = decodeURIComponent(String(hash || '').replace(/^#/, ''));
+      if (hash.indexOf('historia=') === 0) pokazMaszyne(hash.substring(9));
+      else if (hash === 'usterki' || hash === 'historia') ustawWidok(hash);
+    }
+    function start(hash) {
+      // pierwszy wpis historii = to, co otwiera link (bez nadpisywania adresu przed jego odczytem)
+      hash = String(hash || '').replace(/^#/, '');
+      przywracanie = true;
+      try { otworzZHasha(hash); } finally { przywracanie = false; }
+      var st = { w: 'przeglad', m: '' }, dh = decodeURIComponent(hash);
+      if (dh.indexOf('historia=') === 0) st = { w: 'historia', m: dh.substring(9) };
+      else if (dh === 'usterki' || dh === 'historia') st.w = dh;
+      ostatniHash = st.w + (st.m ? '=' + encodeURIComponent(st.m) : '');
+      try { if (HIST) HIST.replace(st, null, ostatniHash); } catch (e) {}
+    }
+    if (window.google && google.script && google.script.url) google.script.url.getLocation(function (l) { start(l && l.hash); });
+    else start(location.hash);
+    if (HIST && HIST.setChangeHandler) HIST.setChangeHandler(function (e) {
+      var st = (e && e.state) || { w: 'przeglad', m: '' };
+      ostatniHash = st.w + (st.m ? '=' + encodeURIComponent(st.m) : '');
+      przywracanie = true;
+      try {
+        if (st.w === 'historia' && st.m) { if (st.m !== wybranaMaszyna) pokazMaszyne(st.m); else ustawWidok('historia'); }
+        else ustawWidok(st.w || 'przeglad');
+      } finally { przywracanie = false; }
+    });
   }
 
   render();
