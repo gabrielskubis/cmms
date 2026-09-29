@@ -27,6 +27,7 @@
         --danger: #ef4444; --danger-tlo: rgba(239, 68, 68, .14); --danger-tekst: #fca5a5;
         --warn: #f59e0b; --warn-tlo: rgba(245, 158, 11, .14); --warn-tekst: #fcd34d;
         --cien: 0 1px 2px rgba(0, 0, 0, .4);
+        color-scheme: dark;
       }
     }
     :root[data-theme="dark"] {
@@ -36,7 +37,9 @@
       --danger: #ef4444; --danger-tlo: rgba(239, 68, 68, .14); --danger-tekst: #fca5a5;
       --warn: #f59e0b; --warn-tlo: rgba(245, 158, 11, .14); --warn-tekst: #fcd34d;
       --cien: 0 1px 2px rgba(0, 0, 0, .4);
+      color-scheme: dark;
     }
+    :root[data-theme="light"] { color-scheme: light; }
 
     * { box-sizing: border-box; }
     html { font-size: 16px; -webkit-text-size-adjust: 100%; }
@@ -104,8 +107,7 @@
     .szukaj { position: relative; }
     .szukaj input { padding-left: 36px; }
     .szukaj::before { content: '⌕'; position: absolute; left: 12px; top: 50%; transform: translateY(-52%); color: var(--muted); font-size: 1.2rem; }
-    .chipy { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-    .chipy::-webkit-scrollbar { display: none; }
+    .chipy { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-2); background: var(--panel);
             color: var(--text); border-radius: 999px; padding: 8px 12px; font-size: .88rem; font-weight: 600; white-space: nowrap; }
     .chip .lb { font-size: .78rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -304,7 +306,7 @@
       .panel-lista { grid-column: 2; grid-row: 1; }
       .panel-szczegoly { grid-column: 3; grid-row: 1; }
       body.tryb-qr .panel-szczegoly { grid-column: 1 / -1; }
-      .panel-filtry .chipy { flex-direction: column; overflow: visible; }
+      .panel-filtry .chipy { flex-direction: column; flex-wrap: nowrap; }
       .panel-filtry .chip { justify-content: space-between; border-radius: 9px; border-color: transparent; background: none; padding: 9px 10px; }
       .panel-filtry .chip:hover { background: var(--panel-2); }
       .panel-filtry .chip.active { background: var(--accent); color: #fff; }
@@ -512,6 +514,8 @@
 <script>
   var PRZEGLADY = <?!= JSON.stringify(pobranePrzeglady || []).replace(/</g, '\\u003c') ?>;
   var ZALOGOWANY_NAZWISKO = <?!= JSON.stringify(zalogowanyNazwisko || '').replace(/</g, '\\u003c') ?>;
+  var ZALOGOWANY_EMAIL = <?!= JSON.stringify(zalogowanyEmail || '').replace(/</g, '\\u003c') ?>;
+  var ZALOGOWANY_STATUS = <?!= JSON.stringify(zalogowanyStatus || '').replace(/</g, '\\u003c') ?>;   // ok | oczekuje | nieaktywny | ''
   var WYBRANE = <?!= JSON.stringify(wybraneId || '').replace(/</g, '\\u003c') ?>;
   var PARAM_QR = <?!= JSON.stringify(parametrQR || '').replace(/</g, '\\u003c') ?>;
   var BLAD = <?!= JSON.stringify(bladLadowania || '').replace(/</g, '\\u003c') ?>;
@@ -684,7 +688,12 @@
     var d = new Date();
     var DNI = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
     $('podtytul').textContent = DNI[d.getDay()] + ', ' + ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear() +
-      (ZALOGOWANY_NAZWISKO ? ' · ' + ZALOGOWANY_NAZWISKO : '');
+      (ZALOGOWANY_NAZWISKO && ZALOGOWANY_STATUS !== 'nieaktywny' ? ' · 👤 ' + ZALOGOWANY_NAZWISKO : '');
+    if (ZALOGOWANY_STATUS === 'oczekuje') {
+      komunikat('👤 Konto ' + ZALOGOWANY_EMAIL + ' nie jest jeszcze na liście pracowników – kierownik musi je zatwierdzić w arkuszu „6. Pracownicy”. Do tego czasu możesz rozliczać jako ' + ZALOGOWANY_NAZWISKO + '.', 'k-info');
+    } else if (ZALOGOWANY_STATUS === 'nieaktywny') {
+      komunikat('👤 Konto ' + ZALOGOWANY_EMAIL + ' jest oznaczone w arkuszu „6. Pracownicy” jako nieaktywne – wybierz wykonawcę ręcznie.', 'k-info');
+    }
 
     google.script.run.withSuccessHandler(ustawPracownikow).withFailureHandler(function () { ustawPracownikow([]); }).pobierzPracownikow();
 
@@ -1254,22 +1263,38 @@
   }
 
   // ---------- PRACOWNICY ----------
+  // Kto jest domyślnym wykonawcą: najpierw osoba przypisana do zalogowanego konta Google
+  // (arkusz „6. Pracownicy”, kolumna Email), potem osoba ostatnio wybrana na tym urządzeniu.
+  function zalogowanyDoWyboru() {
+    return ZALOGOWANY_NAZWISKO && (ZALOGOWANY_STATUS === 'ok' || ZALOGOWANY_STATUS === 'oczekuje') ? ZALOGOWANY_NAZWISKO : '';
+  }
+  function domyslnaOsoba() {
+    var zalogowany = zalogowanyDoWyboru();
+    if (zalogowany && (!PRACOWNICY.length || PRACOWNICY.indexOf(zalogowany) !== -1)) return zalogowany;
+    var zapamietany = odczytaj('cmms_wykonawca');
+    if (zapamietany && (!PRACOWNICY.length || PRACOWNICY.indexOf(zapamietany) !== -1)) return zapamietany;
+    return '';
+  }
   function ustawPracownikow(lista) {
     PRACOWNICY = lista || [];
-    var zapamietany = odczytaj('cmms_wykonawca');
+    // konto czekające na zatwierdzenie widzi siebie na liście (inni jeszcze nie)
+    var zalogowany = zalogowanyDoWyboru();
+    if (PRACOWNICY.length && zalogowany && PRACOWNICY.indexOf(zalogowany) === -1) {
+      PRACOWNICY.push(zalogowany);
+      PRACOWNICY.sort(function (a, b) { return a.localeCompare(b, 'pl'); });
+    }
+    var doWyboru = domyslnaOsoba();
     var stary = $('wykonawca');
     if (!PRACOWNICY.length) {
       var inp = document.createElement('input');
       inp.type = 'text'; inp.id = 'wykonawca'; inp.placeholder = 'Imię i nazwisko';
-      inp.value = zapamietany || ZALOGOWANY_NAZWISKO;
+      inp.value = doWyboru;
       stary.parentNode.replaceChild(inp, stary);
-      $('zglaszajacy').value = zapamietany || ZALOGOWANY_NAZWISKO;
+      $('zglaszajacy').value = doWyboru;
       odswiezDTR();
       return;
     }
     stary.innerHTML = opcjeOsob();
-    var doWyboru = PRACOWNICY.indexOf(zapamietany) !== -1 ? zapamietany
-                 : (ZALOGOWANY_NAZWISKO && PRACOWNICY.indexOf(ZALOGOWANY_NAZWISKO) !== -1 ? ZALOGOWANY_NAZWISKO : '');
     if (doWyboru) stary.value = doWyboru;
     $('poleZglaszajacy').innerHTML = '<select id="zglaszajacy">' + opcjeOsob() + '</select>';
     if (doWyboru) $('zglaszajacy').value = doWyboru;
@@ -1280,7 +1305,7 @@
       PRACOWNICY.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
   }
   function poleOsoby(id) {
-    var zap = odczytaj('cmms_wykonawca');
+    var zap = domyslnaOsoba();
     if (!PRACOWNICY.length) return '<input type="text" id="' + id + '" placeholder="Kto obsługuje?" value="' + esc(zap) + '">';
     return '<select id="' + id + '">' + PRACOWNICY.map(function (n) {
       return '<option' + (n === zap ? ' selected' : '') + '>' + esc(n) + '</option>';

@@ -41,6 +41,16 @@ Bez zmian: sposób zapisu do arkuszy, komunikat DTR, struktura kolumn, kody QR i
 2. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.** Bez tego telefon i link z QR dalej pokazują starą wersję.
 3. Odśwież arkusz (F5) — pojawi się nowa pozycja menu.
 
+## 1a. Wdrożone — wersja 4.9 (wykonawca z konta Google)
+
+- W arkuszu „6. Pracownicy” jest kolumna **Email** (dodawana automatycznie; maile, które wcześniej trafiały do kolumny „Rola”, zostają do niej przeniesione).
+- Aplikacja rozpoznaje technika po koncie Google: najpierw po mailu z kolumny Email, potem po nazwisku z maila (`jan.kowalski@…` → Jan Kowalski) — bez polskich znaków, wielkości liter i kolejności słów, więc `lukasz.zolnierczyk@…` trafia w „Łukasz Żołnierczyk”.
+- **Zalogowany technik ma pierwszeństwo** jako wykonawca i zgłaszający; osoba zapamiętana na telefonie jest tylko zapasem. Zalogowany widać w nagłówku (👤).
+- Konto spoza listy dopisuje się ze statusem **DO ZATWIERDZENIA** (żółte tło) — ta osoba może rozliczać siebie, ale nie pojawia się na listach wyboru innych, dopóki kierownik nie ustawi TAK (albo NIE dla kont wspólnych/przypadkowych).
+- Filtry terminu i obszaru zawijają się do kolejnych wierszy zamiast chować się za krawędzią.
+
+Warunek: Google podaje mail tylko, gdy aplikację wdrożyło konto z tej samej domeny co technik (np. oba @holcim.com) albo Web App działa jako „User accessing the web app”. Po wdrożeniu uruchom raz menu „👷 Utwórz / uporządkuj listę pracowników”, żeby dodać listę wyboru z nowym statusem i formatowanie.
+
 ## 2. Propozycje kolejnych usprawnień
 
 Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do którego celu SMART się przyczynia.
@@ -51,7 +61,7 @@ Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do kt�
 |---|---|---|---|
 | 1 | **Kroczący horyzont harmonogramu** (audyt K1) — wyzwalacz dopisuje przeglądy na +90 dni zamiast sztywnego 31.12.2026 | od 1.01.2027 system przestanie planować | CMMS |
 | 2 | **Zdjęcie do zgłoszenia usterki** (aparat telefonu → Dysk Google, link w arkuszu) | szybsza diagnoza, dokumentacja stanu | CMMS / AI |
-| 3 | **Lista pracowników zatwierdzana przez kierownika** zamiast automatycznego dopisywania kont (audyt W1, W2) | czyste dane wykonawców | CMMS |
+| 3 | ~~Lista pracowników zatwierdzana przez kierownika~~ — zrobione w V4.9 | czyste dane wykonawców | CMMS |
 | 4 | **Odbiorcy powiadomień z arkusza** (per obszar, zastępstwa) zamiast jednego adresu w kodzie (W5) | nikt nie przegapi awarii | CMMS |
 | 5 | **Powód zaległości** przy rozliczaniu po terminie (brak czasu / maszyna pracuje / brak części) | analiza, dlaczego plan nie jest realizowany | CMMS |
 

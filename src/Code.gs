@@ -22,6 +22,11 @@
  *  - Formularz: brak dublowania kolumn przy przebudowie, ochrona przed podwójnym zapisem odpowiedzi.
  *  - Ręczne zmiany w harmonogramie synchronizują się między arkuszem zbiorczym i miesięcznym.
  *
+ * V4.9 - WYKONAWCA Z KONTA GOOGLE:
+ *  - Kolumna "Email" w "6. Pracownicy" (maile przeniesione z kolumny "Rola"), dopasowanie bez polskich znaków.
+ *  - Nowe konta dopisują się jako "DO ZATWIERDZENIA" i nie trafiają na listy wyboru innych osób.
+ *  - Zalogowany pracownik ma pierwszeństwo przed wyborem zapamiętanym na telefonie.
+ *
  * V4.8 - INTERFEJS PRZEGLĄDU NA TELEFON I LAPTOP:
  *  - FormularzMobile.html: układ 1/2/3 kolumny wg szerokości ekranu, checklista, historia maszyny obok przeglądu.
  *  - pobierzStatystykiPrzegladow(), limit w pobierzUsterkiIHistorieMaszyny(), menu: otwórz aplikację w nowej karcie.
@@ -48,105 +53,104 @@ var KOLORY_OBSZAROW = {
 
 var NAGLOWKI_USTERKI = ["ID Zgłoszenia", "Data Zgłoszenia", "ID Urządzenia", "Obszar", "Nazwa Urządzenia", "Opis Usterki", "Priorytet", "Zgłaszający", "Status", "Usuwający", "Data Usunięcia", "Opis Naprawy"];
 
-/**
- * Główny punkt wejścia Web App - ładuje interfejs mobilny
- */
-/**
- * Automatyczne rozpoznawanie nazwiska technika z maila Google.
- * Strategia:
- *  1. Szuka maila w kol. A (jeśli ktoś tam wpisał np. jan.kowalski@holcim.com)
- *  2. Szuka maila w kol. C (jeśli kolumna istnieje i była uzupełniana)
- *  3. Jeśli technik jest na liście po nazwisku – tylko dopisuje mu mail w kol. C
- *  4. Jeśli technika w ogóle nie ma – dopisuje nowy wiersz (nazwisko z maila + mail)
- * Zwraca nazwisko do auto-wypełnienia pola Wykonawca.
- */
-function rozpoznajLubDodajPracownika_(email) {
-  if (!email) return "";
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(ARKUSZ_PRACOWNICY);
-  if (!sh) return "";
+/* ==========================================================================
+ *  ROZPOZNAWANIE TECHNIKA PO KONCIE GOOGLE (V4.9)
+ *  Arkusz "6. Pracownicy": A Imię i nazwisko | B Aktywny | C Rola | D Uwagi | E Email
+ * ========================================================================== */
 
-  var emailNorm = email.trim().toLowerCase();
-  // Nazwisko z maila: "jan.kowalski@holcim.com" → "Jan Kowalski"
-  var lokalny = emailNorm.split("@")[0] || "";
-  var nazwiskoZMaila = lokalny.split(".").map(function (cz) {
-    return cz.charAt(0).toUpperCase() + cz.slice(1);
-  }).join(" ");
+var STATUS_DO_ZATWIERDZENIA = "DO ZATWIERDZENIA";
 
-  var n = sh.getLastRow() - 1;
-  if (n < 1) {
-    // Arkusz pusty – dodaj nagłówek i pierwszy wpis
-    if (sh.getLastRow() < 1) sh.appendRow(["Imię i Nazwisko", "Aktywny", "Email"]);
-    sh.appendRow([nazwiskoZMaila, "", emailNorm]);
-    return nazwiskoZMaila;
-  }
-
-  var kolumn = Math.max(3, sh.getLastColumn());
-  var dane = sh.getRange(2, 1, n, kolumn).getDisplayValues();
-
-  for (var i = 0; i < dane.length; i++) {
-    var mailKolC = String(dane[i][2] || "").trim().toLowerCase();
-    var nazwaKolA = String(dane[i][0] || "").trim();
-
-    // Trafienie po mailu w kol. C
-    if (mailKolC && mailKolC === emailNorm) return nazwaKolA;
-
-    // Trafienie po mailu wpisanym w kol. A (np. stary format)
-    if (nazwaKolA.toLowerCase() === emailNorm) return nazwaKolA;
-  }
-
-  // Mail nie znaleziony – sprawdź czy nazwisko z maila pasuje do istniejącego pracownika
-  for (var j = 0; j < dane.length; j++) {
-    var nazw = String(dane[j][0] || "").trim().toLowerCase();
-    if (nazw === nazwiskoZMaila.toLowerCase()) {
-      // Znalazł po nazwisku – dopisz mail w kol. C żeby następnym razem było szybciej
-      sh.getRange(j + 2, 3).setValue(emailNorm);
-      return String(dane[j][0]).trim();
-    }
-  }
-
-  // Nowy technik – dopisz na koniec listy
-  sh.appendRow([nazwiskoZMaila, "", emailNorm]);
-  return nazwiskoZMaila;
+/** Porównywanie nazwisk bez polskich znaków, wielkości liter i kolejności (Jan Kowalski = kowalski jan). */
+function kluczOsoby_(tekst) {
+  var t = String(tekst || "").toLowerCase().replace(/ł/g, "l");
+  if (t.normalize) t = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return t.replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(String).sort().join(" ");
 }
 
-function rozpoznajLubDodajPracownika_(email) {
-  if (!email) return "";
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(ARKUSZ_PRACOWNICY);
-  if (!sh) return "";
-
-  var emailNorm = email.trim().toLowerCase();
-  var lokalny = emailNorm.split("@")[0] || "";
-  var nazwiskoZMaila = lokalny.split(".").map(function (cz) {
-    return cz.charAt(0).toUpperCase() + cz.slice(1);
-  }).join(" ");
-
+/**
+ * Numer kolumny "Email" w arkuszu pracowników. Gdy jej nie ma - dodaje ją (za kolumną D)
+ * i przenosi tam adresy, które wcześniejsza wersja wpisywała do kolumny C "Rola".
+ */
+function kolumnaEmailPracownikow_(sh) {
+  var ostatnia = Math.max(4, sh.getLastColumn());
+  var naglowki = sh.getRange(1, 1, 1, ostatnia).getDisplayValues()[0];
+  for (var i = 0; i < naglowki.length; i++) {
+    if (/^e-?mail$/i.test(String(naglowki[i]).trim())) return i + 1;
+  }
+  var kol = Math.max(5, sh.getLastColumn() + 1);
+  sh.getRange(1, kol).setValue("Email");
   var n = sh.getLastRow() - 1;
-  if (n < 1) {
-    if (sh.getLastRow() < 1) sh.appendRow(["Imię i Nazwisko", "Aktywny", "Email"]);
-    sh.appendRow([nazwiskoZMaila, "", emailNorm]);
-    return nazwiskoZMaila;
-  }
-
-  var kolumn = Math.max(3, sh.getLastColumn());
-  var dane = sh.getRange(2, 1, n, kolumn).getDisplayValues();
-
-  for (var i = 0; i < dane.length; i++) {
-    var mailKolC = String(dane[i][2] || "").trim().toLowerCase();
-    if (mailKolC && mailKolC === emailNorm) return String(dane[i][0]).trim();
-  }
-
-  for (var j = 0; j < dane.length; j++) {
-    var nazw = String(dane[j][0] || "").trim().toLowerCase();
-    if (nazw === nazwiskoZMaila.toLowerCase()) {
-      sh.getRange(j + 2, 3).setValue(emailNorm);
-      return String(dane[j][0]).trim();
+  if (n > 0) {
+    var rola = sh.getRange(2, 3, n, 1).getDisplayValues();
+    var email = [], czyscRola = false;
+    for (var r = 0; r < n; r++) {
+      var v = String(rola[r][0]).trim();
+      var toMail = v.indexOf("@") > 0 && v.indexOf(" ") < 0;
+      email.push([toMail ? v.toLowerCase() : ""]);
+      if (toMail) { rola[r][0] = ""; czyscRola = true; }
     }
+    sh.getRange(2, kol, n, 1).setValues(email);
+    if (czyscRola) sh.getRange(2, 3, n, 1).setValues(rola);
   }
+  return kol;
+}
 
-  sh.appendRow([nazwiskoZMaila, "", emailNorm]);
-  return nazwiskoZMaila;
+/**
+ * Rozpoznaje technika po mailu konta Google, na które zalogowany jest telefon/laptop.
+ *  1. mail w kolumnie "Email"                          -> ta osoba
+ *  2. nazwisko z maila (jan.kowalski@ -> Jan Kowalski) -> dopasowanie do kol. A bez polskich znaków
+ *     i kolejności; mail zostaje dopisany do kolumny "Email"
+ *  3. brak dopasowania -> nowy wiersz ze statusem "DO ZATWIERDZENIA" (nie pojawia się na listach
+ *     wyboru innych osób, dopóki kierownik nie zmieni statusu na TAK)
+ * Zwraca { nazwisko, status: "ok" | "oczekuje" | "nieaktywny" | "" }.
+ */
+function rozpoznajLubDodajPracownika_(email) {
+  var wynik = { nazwisko: "", status: "" };
+  var emailNorm = String(email || "").trim().toLowerCase();
+  if (!emailNorm) return wynik;
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ARKUSZ_PRACOWNICY);
+  if (!sh) return wynik;
+  if (sh.getLastRow() < 1) sh.getRange(1, 1, 1, 5).setValues([["Imię i nazwisko", "Aktywny", "Rola", "Uwagi", "Email"]]);
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(10000); } catch (e) { return wynik; }
+  try {
+    var kolEmail = kolumnaEmailPracownikow_(sh);
+    var n = sh.getLastRow() - 1;
+    var dane = n > 0 ? sh.getRange(2, 1, n, Math.max(kolEmail, 4)).getDisplayValues() : [];
+    var statusWiersza = function (w) {
+      var a = String(w[1]).trim().toUpperCase();
+      return a === "NIE" ? "nieaktywny" : (a === STATUS_DO_ZATWIERDZENIA ? "oczekuje" : "ok");
+    };
+
+    for (var i = 0; i < dane.length; i++) {
+      if (String(dane[i][kolEmail - 1]).trim().toLowerCase() === emailNorm && String(dane[i][0]).trim()) {
+        return { nazwisko: String(dane[i][0]).replace(/\s+/g, " ").trim(), status: statusWiersza(dane[i]) };
+      }
+    }
+
+    var lokalny = emailNorm.split("@")[0].replace(/[0-9_]+/g, " ");
+    var nazwiskoZMaila = lokalny.split(/[.\-\s]+/).filter(String).map(function (cz) {
+      return cz.charAt(0).toUpperCase() + cz.slice(1);
+    }).join(" ");
+    var klucz = kluczOsoby_(nazwiskoZMaila);
+
+    for (var j = 0; klucz && j < dane.length; j++) {
+      if (kluczOsoby_(dane[j][0]) !== klucz) continue;
+      if (!String(dane[j][kolEmail - 1]).trim()) sh.getRange(j + 2, kolEmail).setValue(emailNorm);
+      return { nazwisko: String(dane[j][0]).replace(/\s+/g, " ").trim(), status: statusWiersza(dane[j]) };
+    }
+
+    var wiersz = [nazwiskoZMaila || emailNorm, STATUS_DO_ZATWIERDZENIA, "",
+      "Dodano automatycznie " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd") +
+      " po zalogowaniu – popraw imię i nazwisko, ustaw Aktywny = TAK albo NIE"];
+    while (wiersz.length < kolEmail - 1) wiersz.push("");
+    wiersz.push(emailNorm);
+    sh.getRange(sh.getLastRow() + 1, 1, 1, wiersz.length).setValues([wiersz]);
+    return { nazwisko: wiersz[0], status: "oczekuje" };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function doGet(e) {
@@ -167,17 +171,16 @@ function doGet(e) {
     template.bladLadowania = "";
 
     var emailZalogowanego = "";
-    var nazwiskoZalogowanego = "";
+    var osoba = { nazwisko: "", status: "" };
     try {
       emailZalogowanego = Session.getActiveUser().getEmail() || "";
-      if (emailZalogowanego) {
-        nazwiskoZalogowanego = rozpoznajLubDodajPracownika_(emailZalogowanego);
-      }
+      if (emailZalogowanego) osoba = rozpoznajLubDodajPracownika_(emailZalogowanego);
     } catch (eUser) {
-      Logger.log("Nie udało się odczytać maila: " + eUser.message);
+      Logger.log("Nie udało się rozpoznać zalogowanego pracownika: " + eUser.message);
     }
     template.zalogowanyEmail = emailZalogowanego;
-    template.zalogowanyNazwisko = nazwiskoZalogowanego;
+    template.zalogowanyNazwisko = osoba.nazwisko;
+    template.zalogowanyStatus = osoba.status;
 
   } catch (err) {
     Logger.log("Błąd w doGet: " + err.message);
@@ -187,6 +190,7 @@ function doGet(e) {
     template.bladLadowania = err.message;
     template.zalogowanyEmail = "";
     template.zalogowanyNazwisko = "";
+    template.zalogowanyStatus = "";
   }
 
   return template.evaluate()
@@ -3237,7 +3241,8 @@ function pobierzPracownikow() {
   var lista = [];
   dane.forEach(function (r) {
     var imie = String(r[0]).replace(/\s+/g, " ").trim();
-    var aktywny = String(r[1]).trim().toUpperCase() !== "NIE";
+    var status = String(r[1]).trim().toUpperCase();
+    var aktywny = status !== "NIE" && status !== STATUS_DO_ZATWIERDZENIA;
     if (!imie || !aktywny || widziane[imie.toLowerCase()]) return;
     widziane[imie.toLowerCase()] = true;
     lista.push(imie);
@@ -3256,10 +3261,11 @@ function utworzArkuszPracownikow() {
   var nowy = false;
   if (!sh) {
     sh = ss.insertSheet(ARKUSZ_PRACOWNICY);
-    sh.getRange(1, 1, 1, 4).setValues([["Imię i nazwisko", "Aktywny", "Rola", "Uwagi"]]);
-    sh.getRange(2, 1, 1, 4).setValues([["Gabriel Skubis", "TAK", "Wdrożenie CMMS", ""]]);
+    sh.getRange(1, 1, 1, 5).setValues([["Imię i nazwisko", "Aktywny", "Rola", "Uwagi", "Email"]]);
+    sh.getRange(2, 1, 1, 5).setValues([["Gabriel Skubis", "TAK", "Wdrożenie CMMS", "", ""]]);
     nowy = true;
   }
+  var kolEmail = kolumnaEmailPracownikow_(sh);
 
   // Warianty nazwisk z historii (Rejestr kol. G, Usterki kol. H)
   var warianty = {};
@@ -3279,23 +3285,27 @@ function utworzArkuszPracownikow() {
 
   // Formatowanie
   if (sh.getFilter()) sh.getFilter().remove();
-  sh.getRange(1, 1, 1, 4).setFontWeight("bold").setFontSize(10).setBackground(KOLOR_NAGLOWKA)
+  sh.getRange(1, 1, 1, kolEmail).setFontWeight("bold").setFontSize(10).setBackground(KOLOR_NAGLOWKA)
     .setFontColor("#ffffff").setHorizontalAlignment("center").setVerticalAlignment("middle");
   sh.setRowHeight(1, 36);
   sh.setFrozenRows(1);
   sh.getRange("B2:B").setDataValidation(SpreadsheetApp.newDataValidation()
-    .requireValueInList(["TAK", "NIE"], true).setAllowInvalid(false).build()).setHorizontalAlignment("center");
+    .requireValueInList(["TAK", "NIE", STATUS_DO_ZATWIERDZENIA], true).setAllowInvalid(false).build()).setHorizontalAlignment("center");
   sh.getRange("A2:A").setFontWeight("bold");
   sh.clearConditionalFormatRules();
   sh.setConditionalFormatRules([
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$B2="NIE"')
-      .setFontColor("#94a3b8").setStrikethrough(true).setRanges([sh.getRange("A2:D")]).build()
+      .setFontColor("#94a3b8").setStrikethrough(true).setRanges([sh.getRange(2, 1, sh.getMaxRows() - 1, kolEmail)]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$B2="' + STATUS_DO_ZATWIERDZENIA + '"')
+      .setBackground("#fef3c7").setRanges([sh.getRange(2, 1, sh.getMaxRows() - 1, kolEmail)]).build()
   ]);
   sh.setFrozenColumns(1);
-  sh.setColumnWidth(1, 220); sh.setColumnWidth(2, 90); sh.setColumnWidth(3, 180); sh.setColumnWidth(4, 260);
-  sh.getRange(1, 1, Math.max(sh.getLastRow(), 2), 4).createFilter();
+  sh.setColumnWidth(1, 220); sh.setColumnWidth(2, 90); sh.setColumnWidth(3, 180); sh.setColumnWidth(4, 260); sh.setColumnWidth(kolEmail, 240);
+  sh.getRange(1, 1, Math.max(sh.getLastRow(), 2), kolEmail).createFilter();
   sh.getRange("A1").setNote(
-    "Lista osób do wyboru w formularzach. Osoby, które odeszły: ustaw „Aktywny” = NIE (nie usuwaj wiersza).\n\n" +
+    "Lista osób do wyboru w formularzach. Osoby, które odeszły: ustaw „Aktywny” = NIE (nie usuwaj wiersza).\n" +
+    "Email = konto Google technika; aplikacja sama wpisze go jako wykonawcę.\n" +
+    "DO ZATWIERDZENIA = konto, które otworzyło aplikację, ale nie pasuje do nikogo z listy – popraw nazwisko i ustaw TAK albo NIE.\n\n" +
     "Nazwiska wpisywane dotąd ręcznie (liczba wpisów):\n" + (opis || "brak"));
   sh.setTabColor("#0ea5e9");
   ss.setActiveSheet(sh);
