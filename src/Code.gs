@@ -128,8 +128,12 @@ function rozpoznajLubDodajPracownika_(email) {
   try { lock.waitLock(10000); } catch (e) { return wynik; }
   try {
     var r = rozpoznajPracownikaWArkuszu_(sh, emailNorm);
+    SpreadsheetApp.flush();   // błędy zapisu (np. walidacja) wychodzą tutaj, a nie po wyświetleniu strony
     try { cacheSkryptu_().put(kluczCache, JSON.stringify(r), 1800); } catch (eC2) {}
     return r;
+  } catch (eZapis) {
+    Logger.log("Rozpoznanie pracownika " + emailNorm + ": " + eZapis.message);
+    return wynik;
   } finally {
     lock.releaseLock();
   }
@@ -163,6 +167,9 @@ function rozpoznajPracownikaWArkuszu_(sh, emailNorm) {
       return { nazwisko: String(dane[j][0]).replace(/\s+/g, " ").trim(), status: statusWiersza(dane[j]) };
     }
 
+    // stara reguła w kolumnie „Aktywny” dopuszczała tylko TAK/NIE – bez tego zapis zostałby odrzucony
+    sh.getRange(2, 2, Math.max(sh.getMaxRows() - 1, 1), 1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(["TAK", "NIE", STATUS_DO_ZATWIERDZENIA], true).setAllowInvalid(true).build());
     var wiersz = [nazwiskoZMaila || emailNorm, STATUS_DO_ZATWIERDZENIA, "",
       "Dodano automatycznie " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd") +
       " po zalogowaniu – popraw imię i nazwisko, ustaw Aktywny = TAK albo NIE"];
