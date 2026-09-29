@@ -97,6 +97,7 @@
     .sekcja-tytul { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
                     margin: 14px 0 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .sekcja-tytul:first-child { margin-top: 0; }
+    .tylko-duzy { display: none; }
 
     /* telefon: albo lista, albo szczegóły */
     body.pokaz-szczegoly .panel-filtry, body.pokaz-szczegoly .panel-lista { display: none; }
@@ -108,6 +109,45 @@
     .szukaj input { padding-left: 36px; }
     .szukaj::before { content: '⌕'; position: absolute; left: 12px; top: 50%; transform: translateY(-52%); color: var(--muted); font-size: 1.2rem; }
     .chipy { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    /* termin: pasek segmentów – zawsze w całości widoczny */
+    .segmenty { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 3px; margin-top: 12px;
+                border-radius: 11px; background: var(--panel-2); border: 1px solid var(--border); }
+    .seg { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 52px;
+           border: none; border-radius: 8px; background: transparent; color: var(--muted); padding: 6px 2px;
+           transition: background .15s, color .15s; }
+    .seg .nazwa { font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .seg .lb { font-size: 1.1rem; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.15; }
+    .seg.zal .lb { color: var(--danger); }
+    .seg:hover { background: var(--panel); }
+    .seg.active { background: var(--accent); color: rgba(255, 255, 255, .9); box-shadow: var(--cien); }
+    .seg.active .lb { color: #fff; }
+    .segmenty.szukanie .seg.active { background: var(--panel); color: var(--muted); box-shadow: none; }
+    .segmenty.szukanie .seg.active .lb { color: var(--text); }
+
+    /* obszar: jeden przycisk + rozwijana lista */
+    .obszar-wybor { position: relative; margin-top: 8px; }
+    .obszar-btn { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 12px;
+                  border: 1px solid var(--border-2); border-radius: 10px; background: var(--field); color: var(--text); font-size: .95rem; text-align: left; }
+    .obszar-btn:hover { border-color: var(--accent); }
+    .obszar-btn .tekst { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .obszar-btn .tekst small { color: var(--muted); font-size: .85rem; }
+    .obszar-btn .strz { color: var(--muted); transition: transform .15s; }
+    .obszar-wybor.otwarte .obszar-btn { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tlo); }
+    .obszar-wybor.otwarte .strz { transform: rotate(180deg); }
+    .kropka { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+    .kropka.wsz { background: conic-gradient(#3b82f6 0 17%, #f59e0b 0 34%, #8b5cf6 0 50%, #10b981 0 67%, #06b6d4 0 84%, #ef4444 0); }
+    .obszar-lista { display: none; position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0; padding: 6px;
+                    background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px;
+                    box-shadow: 0 16px 40px rgba(15, 23, 42, .22); max-height: 60vh; overflow-y: auto; }
+    .obszar-wybor.otwarte .obszar-lista { display: block; }
+    .obszar-opcja { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 10px;
+                    border: none; border-radius: 8px; background: none; color: var(--text); font-size: .95rem; text-align: left; }
+    .obszar-opcja:hover, .obszar-opcja:focus-visible { background: var(--panel-2); }
+    .obszar-opcja .nazwa { flex: 1; }
+    .obszar-opcja .lb { font-size: .85rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .obszar-opcja .ok { width: 16px; color: var(--accent-tekst); font-weight: 800; }
+    .obszar-opcja.active { background: var(--accent-tlo); font-weight: 700; }
     .chip { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-2); background: var(--panel);
             color: var(--text); border-radius: 999px; padding: 8px 12px; font-size: .88rem; font-weight: 600; white-space: nowrap; }
     .chip .lb { font-size: .78rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -267,6 +307,8 @@
           font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .78rem; }
 
     @media (max-width: 420px) {
+      .seg .nazwa { font-size: .72rem; letter-spacing: -.01em; }
+      .segmenty { gap: 2px; }
       .zakladka { font-size: .86rem; padding: 10px 7px 12px; }
       .duzy { font-size: .98rem; gap: 8px; }
       .duzy .ik { font-size: 1.3rem; }
@@ -306,11 +348,20 @@
       .panel-lista { grid-column: 2; grid-row: 1; }
       .panel-szczegoly { grid-column: 3; grid-row: 1; }
       body.tryb-qr .panel-szczegoly { grid-column: 1 / -1; }
-      .panel-filtry .chipy { flex-direction: column; flex-wrap: nowrap; }
-      .panel-filtry .chip { justify-content: space-between; border-radius: 9px; border-color: transparent; background: none; padding: 9px 10px; }
-      .panel-filtry .chip:hover { background: var(--panel-2); }
-      .panel-filtry .chip.active { background: var(--accent); color: #fff; }
-      .panel-filtry .chip .nazwa { display: flex; align-items: center; gap: 8px; }
+      /* duży ekran: termin i obszar jako stałe, pionowe menu */
+      .tylko-duzy { display: flex; }
+      .segmenty { display: flex; flex-direction: column; gap: 2px; padding: 0; margin-top: 0; background: none; border: none; }
+      .seg { flex-direction: row; justify-content: space-between; min-height: 40px; padding: 9px 10px; color: var(--text); }
+      .seg .nazwa { font-size: .92rem; }
+      .seg .lb { font-size: .82rem; font-weight: 700; color: var(--muted); }
+      .seg:hover { background: var(--panel-2); }
+      .obszar-btn { display: none; }
+      .obszar-wybor { margin-top: 0; }
+      .obszar-lista { display: block; position: static; padding: 0; border: none; box-shadow: none; max-height: none; background: none; }
+      .obszar-opcja { min-height: 40px; font-size: .92rem; }
+      .obszar-opcja.active { background: var(--accent); color: #fff; }
+      .obszar-opcja.active .lb { color: #fff; }
+      .obszar-opcja .ok { display: none; }
     }
 
     /* szczegóły dość szerokie → checklista i formularz obok historii maszyny */
@@ -351,16 +402,23 @@
   <!-- ===== FILTRY ===== -->
   <aside class="panel panel-filtry" id="panelFiltry">
     <div class="szukaj"><input type="search" id="szukaj" placeholder="Szukaj maszyny lub ID" autocomplete="off"></div>
-    <div class="sekcja-tytul" style="margin-top:14px;">Termin</div>
-    <div class="chipy" id="chipyTryb">
-      <button type="button" class="chip" data-tryb="dozrobienia"><span class="nazwa">Do zrobienia</span><span class="lb" id="c-dozrobienia"></span></button>
-      <button type="button" class="chip zal" data-tryb="zalegly"><span class="nazwa">Zaległe</span><span class="lb" id="c-zalegly"></span></button>
-      <button type="button" class="chip" data-tryb="dzis"><span class="nazwa">Dziś</span><span class="lb" id="c-dzis"></span></button>
-      <button type="button" class="chip" data-tryb="nadchodzacy"><span class="nazwa">Następne 14 dni</span><span class="lb" id="c-nadchodzacy"></span></button>
-      <button type="button" class="chip" data-tryb="wszystkie"><span class="nazwa">Wszystkie</span><span class="lb" id="c-wszystkie"></span></button>
+    <div class="sekcja-tytul tylko-duzy" style="margin-top:14px;">Termin</div>
+    <div class="segmenty" id="chipyTryb" role="tablist" aria-label="Termin">
+      <button type="button" class="seg" data-tryb="dozrobienia" role="tab"><span class="nazwa">Do zrobienia</span><span class="lb" id="c-dozrobienia"></span></button>
+      <button type="button" class="seg zal" data-tryb="zalegly" role="tab"><span class="nazwa">Zaległe</span><span class="lb" id="c-zalegly"></span></button>
+      <button type="button" class="seg" data-tryb="dzis" role="tab"><span class="nazwa">Dziś</span><span class="lb" id="c-dzis"></span></button>
+      <button type="button" class="seg" data-tryb="nadchodzacy" role="tab"><span class="nazwa">14 dni</span><span class="lb" id="c-nadchodzacy"></span></button>
     </div>
-    <div class="sekcja-tytul">Obszar</div>
-    <div class="chipy" id="chipyObszar"></div>
+    <div class="sekcja-tytul tylko-duzy">Obszar</div>
+    <div class="obszar-wybor" id="obszarWybor">
+      <button type="button" class="obszar-btn" id="btnObszar" aria-haspopup="listbox" aria-expanded="false">
+        <span class="kropka wsz" id="obszarKropka"></span>
+        <span class="tekst"><small>Obszar:</small> <b id="obszarNazwa">Wszystkie</b></span>
+        <span class="lb" id="obszarLicznik" style="color:var(--muted);font-weight:700;font-size:.85rem;"></span>
+        <span class="strz">▾</span>
+      </button>
+      <div class="obszar-lista" id="chipyObszar" role="listbox" aria-label="Obszar"></div>
+    </div>
   </aside>
 
   <!-- ===== LISTA ===== -->
@@ -555,7 +613,7 @@
     { k: 'nadchodzacy', l: 'Najbliższe dni' },
     { k: 'wykonany', l: 'Już rozliczone' }
   ];
-  var TYTULY_TRYBU = { dozrobienia: 'Do zrobienia', zalegly: 'Zaległe', dzis: 'Na dziś', nadchodzacy: 'Następne 14 dni', wszystkie: 'Wszystkie' };
+  var TYTULY_TRYBU = { dozrobienia: 'Do zrobienia', zalegly: 'Zaległe', dzis: 'Na dziś', nadchodzacy: 'Następne 14 dni' };
   var szeroki = window.matchMedia ? window.matchMedia('(min-width: 900px)') : { matches: false };
 
   // ---------- NARZĘDZIA ----------
@@ -703,12 +761,24 @@
     $('toastZamknij').addEventListener('click', function () { komunikat(''); });
     $('szukaj').addEventListener('input', render);
     $('chipyTryb').addEventListener('click', function (e) {
-      var b = e.target.closest('.chip'); if (!b) return;
+      var b = e.target.closest('.seg'); if (!b) return;
+      if ($('szukaj').value) $('szukaj').value = '';
       tryb = b.getAttribute('data-tryb'); render();
     });
     $('chipyObszar').addEventListener('click', function (e) {
-      var b = e.target.closest('.chip'); if (!b) return;
-      obszar = b.getAttribute('data-obszar'); pamietaj('cmms_obszar', obszar); render();
+      var b = e.target.closest('.obszar-opcja'); if (!b) return;
+      obszar = b.getAttribute('data-obszar'); pamietaj('cmms_obszar', obszar);
+      zamknijObszary(true); render();
+    });
+    $('btnObszar').addEventListener('click', function () {
+      if ($('obszarWybor').classList.contains('otwarte')) { zamknijObszary(); return; }
+      $('obszarWybor').classList.add('otwarte');
+      this.setAttribute('aria-expanded', 'true');
+      var akt = $('chipyObszar').querySelector('.obszar-opcja.active') || $('chipyObszar').querySelector('.obszar-opcja');
+      if (akt) akt.focus();
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('#obszarWybor')) zamknijObszary();
     });
     document.querySelectorAll('.kafel[data-tryb]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -875,8 +945,15 @@
       return norm(p.nazwaUrzadzenia + ' ' + p.idUrzadzenia + ' ' + p.idPrzegladu + ' ' + p.obszar).indexOf(q) >= 0;
     });
   }
+  function szukanie() { return !!norm($('szukaj').value).trim(); }
+  function zamknijObszary(focus) {
+    if (!$('obszarWybor').classList.contains('otwarte')) return;
+    $('obszarWybor').classList.remove('otwarte');
+    $('btnObszar').setAttribute('aria-expanded', 'false');
+    if (focus && !szeroki.matches) $('btnObszar').focus();
+  }
   function pasujeDoTrybu(p) {
-    if (tryb === 'wszystkie') return true;
+    if (tryb === 'wszystkie' || szukanie()) return true;   // wyszukiwanie obejmuje wszystkie terminy
     if (tryb === 'dozrobienia') return p.kategoria === 'zalegly' || p.kategoria === 'dzis';
     return p.kategoria === tryb;
   }
@@ -923,23 +1000,36 @@
     if (obszar && obszary.indexOf(obszar) < 0) obszar = '';
     bazowe.forEach(function (p) { licz[p.obszar] = (licz[p.obszar] || 0) + 1; });
     obszary.sort();
-    var html = '<button type="button" class="chip' + (!obszar ? ' active' : '') + '" data-obszar="">' +
-      '<span class="nazwa">Wszystkie obszary</span><span class="lb">' + bazowe.length + '</span></button>';
+    function opcja(wartosc, nazwa, kropka, ile) {
+      var akt = wartosc === obszar;
+      return '<button type="button" class="obszar-opcja' + (akt ? ' active' : '') + '" role="option" aria-selected="' + akt + '" data-obszar="' + esc(wartosc) + '">' +
+        '<span class="ok">' + (akt ? '✓' : '') + '</span>' + kropka +
+        '<span class="nazwa">' + esc(nazwa) + '</span><span class="lb">' + ile + '</span></button>';
+    }
+    var html = opcja('', 'Wszystkie obszary', '<span class="kropka wsz"></span>', bazowe.length);
     obszary.forEach(function (o) {
-      html += '<button type="button" class="chip' + (o === obszar ? ' active' : '') + '" data-obszar="' + esc(o) + '">' +
-        '<span class="nazwa"><span class="kropka" style="background:' + kolorObszaru(o) + '"></span>' + esc(o) + '</span>' +
-        '<span class="lb">' + (licz[o] || 0) + '</span></button>';
+      html += opcja(o, o, '<span class="kropka" style="background:' + kolorObszaru(o) + '"></span>', licz[o] || 0);
     });
     $('chipyObszar').innerHTML = html;
+    $('obszarNazwa').textContent = obszar || 'Wszystkie';
+    $('obszarLicznik').textContent = obszar ? (licz[obszar] || 0) : bazowe.length;
+    $('obszarKropka').className = 'kropka' + (obszar ? '' : ' wsz');
+    $('obszarKropka').style.background = obszar ? kolorObszaru(obszar) : '';
   }
 
   function render() {
     var bazowe = filtrujBazowe();
-    var licz = { dozrobienia: 0, wszystkie: bazowe.length, zalegly: 0, dzis: 0, nadchodzacy: 0 };
+    if (tryb === 'wszystkie') tryb = 'dozrobienia';
+    var licz = { dozrobienia: 0, zalegly: 0, dzis: 0, nadchodzacy: 0 };
     bazowe.forEach(function (p) { if (licz[p.kategoria] !== undefined) licz[p.kategoria]++; });
     licz.dozrobienia = licz.zalegly + licz.dzis;
     Object.keys(licz).forEach(function (k) { $('c-' + k).textContent = licz[k]; });
-    document.querySelectorAll('#chipyTryb .chip').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tryb') === tryb); });
+    document.querySelectorAll('#chipyTryb .seg').forEach(function (b) {
+      var akt = b.getAttribute('data-tryb') === tryb;
+      b.classList.toggle('active', akt);
+      b.setAttribute('aria-selected', akt);
+    });
+    $('chipyTryb').classList.toggle('szukanie', szukanie());
 
     if (!TRYB_MASZYNY) {
       var wszystkie = PRZEGLADY;
@@ -963,11 +1053,11 @@
           '<span class="badge ' + t[1] + '">' + t[0] + '</span></button>';
       });
     });
-    $('listaTytul').textContent = TYTULY_TRYBU[tryb] + (obszar ? ' · ' + obszar : '');
+    $('listaTytul').textContent = (szukanie() ? 'Wyniki: „' + $('szukaj').value.trim() + '”' : TYTULY_TRYBU[tryb]) + (obszar ? ' · ' + obszar : '');
     $('listaLicznik').textContent = ile ? ile + ' ' + (ile === 1 ? 'przegląd' : (ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 10 || ile % 100 >= 20) ? 'przeglądy' : 'przeglądów')) : '';
     var q = norm($('szukaj').value).trim();
     $('lista').innerHTML = html || (tryb === 'dozrobienia' && !q && !obszar
-      ? '<div class="pusto">✅ Nic więcej do zrobienia na dziś.<br>Kolejne przeglądy: „Następne 14 dni”.</div>'
+      ? '<div class="pusto">✅ Nic więcej do zrobienia na dziś.<br>Kolejne przeglądy: „14 dni”.</div>'
       : '<div class="pusto">Brak przeglądów dla wybranych filtrów.</div>');
     if (!MASZYNA) ustawWidok();
   }
@@ -1441,6 +1531,7 @@
   // ---------- SKRÓTY KLAWISZOWE (laptop) ----------
   function skrotyKlawiszowe(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Escape' && $('obszarWybor').classList.contains('otwarte')) { zamknijObszary(true); return; }
     if (e.key === 'Escape') {
       if (wPolu(e)) { e.target.blur(); return; }
       if (!$('panelDtr').hidden) { anulujDtr(); return; }

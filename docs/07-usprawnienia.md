@@ -47,7 +47,8 @@ Bez zmian: sposób zapisu do arkuszy, komunikat DTR, struktura kolumn, kody QR i
 - Aplikacja rozpoznaje technika po koncie Google: najpierw po mailu z kolumny Email, potem po nazwisku z maila (`jan.kowalski@…` → Jan Kowalski) — bez polskich znaków, wielkości liter i kolejności słów, więc `lukasz.zolnierczyk@…` trafia w „Łukasz Żołnierczyk”.
 - **Zalogowany technik ma pierwszeństwo** jako wykonawca i zgłaszający; osoba zapamiętana na telefonie jest tylko zapasem. Zalogowany widać w nagłówku (👤).
 - Konto spoza listy dopisuje się ze statusem **DO ZATWIERDZENIA** (żółte tło) — ta osoba może rozliczać siebie, ale nie pojawia się na listach wyboru innych, dopóki kierownik nie ustawi TAK (albo NIE dla kont wspólnych/przypadkowych).
-- Filtry terminu i obszaru zawijają się do kolejnych wierszy zamiast chować się za krawędzią.
+- **Nawigacja filtrów** (telefon i mniejszy laptop): termin jako pasek 4 segmentów z licznikami (Do zrobienia / Zaległe / Dziś / 14 dni) — zawsze w całości widoczny; obszar jako jeden przycisk „Obszar: … ▾” z rozwijaną listą (kolory, liczniki, ✓ przy wybranym). Na dużym ekranie oba filtry to stałe pionowe menu po lewej.
+- Wyszukiwarka przeszukuje wszystkie terminy naraz (tytuł listy: „Wyniki: …”); kliknięcie segmentu czyści wyszukiwanie. `Esc` zamyka listę obszarów.
 
 Warunek: Google podaje mail tylko, gdy aplikację wdrożyło konto z tej samej domeny co technik (np. oba @holcim.com) albo Web App działa jako „User accessing the web app”. Po wdrożeniu uruchom raz menu „👷 Utwórz / uporządkuj listę pracowników”, żeby dodać listę wyboru z nowym statusem i formatowanie.
 
