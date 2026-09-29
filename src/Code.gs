@@ -22,6 +22,11 @@
  *  - Formularz: brak dublowania kolumn przy przebudowie, ochrona przed podwójnym zapisem odpowiedzi.
  *  - Ręczne zmiany w harmonogramie synchronizują się między arkuszem zbiorczym i miesięcznym.
  *
+ * V4.11 - PAMIĘĆ PODRĘCZNA:
+ *  - Lista przeglądów, karta urządzeń, pracownicy i statystyki w CacheService - otwarcie z linku/QR
+ *    nie czyta arkusza, dopóki nic się nie zmieniło. Czyszczone po każdym zapisie i edycji arkusza.
+ *  - Rozpoznanie pracownika bez czekania na blokadę (pamięć per mail).
+ *
  * V4.10 - SZYBSZE ŁADOWANIE:
  *  - Start aplikacji w jednej odpowiedzi (lista + pracownicy; po skanie QR tylko dane tej maszyny).
  *  - Lista przeglądów spakowana (spakujPrzeglady_) - kilka razy mniej danych na telefon.
@@ -116,9 +121,22 @@ function rozpoznajLubDodajPracownika_(email) {
   if (!sh) return wynik;
   if (sh.getLastRow() < 1) sh.getRange(1, 1, 1, 5).setValues([["Imię i nazwisko", "Aktywny", "Rola", "Uwagi", "Email"]]);
 
+  // szybka ścieżka: ten sam mail rozpoznany niedawno (bez czytania arkusza i bez czekania na blokadę)
+  var kluczCache = "cmms_os_" + wersjaPracownikow_() + "_" + emailNorm;
+  try { var zc = cacheSkryptu_().get(kluczCache); if (zc) return JSON.parse(zc); } catch (eC) {}
   var lock = LockService.getScriptLock();
   try { lock.waitLock(10000); } catch (e) { return wynik; }
   try {
+    var r = rozpoznajPracownikaWArkuszu_(sh, emailNorm);
+    try { cacheSkryptu_().put(kluczCache, JSON.stringify(r), 1800); } catch (eC2) {}
+    return r;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function rozpoznajPracownikaWArkuszu_(sh, emailNorm) {
+  {
     var kolEmail = kolumnaEmailPracownikow_(sh);
     var n = sh.getLastRow() - 1;
     var dane = n > 0 ? sh.getRange(2, 1, n, Math.max(kolEmail, 4)).getDisplayValues() : [];
@@ -151,9 +169,8 @@ function rozpoznajLubDodajPracownika_(email) {
     while (wiersz.length < kolEmail - 1) wiersz.push("");
     wiersz.push(emailNorm);
     sh.getRange(sh.getLastRow() + 1, 1, 1, wiersz.length).setValues([wiersz]);
+    wyczyscCache_(["cmms_prac"]);
     return { nazwisko: wiersz[0], status: "oczekuje" };
-  } finally {
-    lock.releaseLock();
   }
 }
 
@@ -166,18 +183,19 @@ function doGet(e) {
     // Wszystko, czego strona potrzebuje na start, idzie w JEDNEJ odpowiedzi (bez dodatkowych zapytań):
     //  - skan QR maszyny: tylko przeglądy tej maszyny (bez czytania całej listy),
     //  - zwykłe wejście: lista w wersji spakowanej (opis czynności raz na maszynę, nie przy każdym terminie).
-    var lista = [], wybrane = "", startMaszyny = null;
+    //  - dane z pamięci podręcznej (CacheService) - arkusz czytany tylko po zmianach
+    var pakiet = { v: 2, z: [], m: {}, w: [] }, wybrane = "", startMaszyny = null;
     if (param && param.indexOf("PRZ-") !== 0) {
       startMaszyny = pobierzPrzegladyMaszyny(param);
     } else {
-      lista = pobierzWszystkiePrzegladyDoFormularza("");
+      pakiet = daneStartowe_().lista;
       wybrane = param;
-      if (wybrane && !lista.some(function (p) { return normalizujId_(p.idPrzegladu) === normalizujId_(wybrane); })) {
-        lista = pobierzWszystkiePrzegladyDoFormularza(wybrane);
+      if (wybrane && !pakiet.w.some(function (w) { return normalizujId_(w[0]) === normalizujId_(wybrane); })) {
+        pakiet = spakujPrzeglady_(czytajPrzegladyDoFormularza_(wybrane));
       }
     }
 
-    template.pobranePrzeglady = spakujPrzeglady_(lista);
+    template.pobranePrzeglady = pakiet;
     template.startMaszyny = startMaszyny;
     template.pracownicy = pobierzPracownikow();
     template.wybraneId = wybrane;
@@ -241,6 +259,7 @@ function onOpen() {
       .addItem('➕ Wygeneruj Nowy Formularz Google', 'stworzFormularzGoogle'))
     .addSubMenu(ui.createMenu('🛠️ Serwis i naprawa danych')
       .addItem('🧪 Diagnostyka danych CMMS (raport)', 'diagnostykaDanychCMMS')
+      .addItem('⚡ Wyczyść pamięć podręczną aplikacji', 'wyczyscPamiecAplikacji')
       .addSeparator()
       .addItem('🔧 Napraw format ID urządzeń (1.10 ≠ 1.1)', 'naprawFormatIdUrzadzen')
       .addItem('🔁 Migruj stare ID przeglądów (naprawa historii)', 'migrujStareIdPrzegladow')
@@ -314,6 +333,9 @@ function ustawKolumneJakoTekst_(sheet, kolumna, liczbaWierszy) {
  * Mapa ID urządzenia -> {obszar, nazwa, czestotliwosc, zakres} z arkusza "1. Urządzenia".
  */
 function pobierzMapeUrzadzen_(ss) {
+  return zCache_("cmms_mapa", 1800, function () { return czytajMapeUrzadzen_(ss); });
+}
+function czytajMapeUrzadzen_(ss) {
   ss = ss || SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("1. Urządzenia");
   var mapa = {};
@@ -383,7 +405,7 @@ function aktualizujCMMSKrakowFull() {
 /**
  * AKTUALIZACJA KARTY URZĄDZEŃ (110 maszyn Krakowa)
  */
-function aktualizujKarteUrzadzenKrakow(spreadsheetObj) {
+function aktualizujKarteUrzadzenKrakow__zapis(spreadsheetObj) {
   var ss = spreadsheetObj || SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("1. Urządzenia") || ss.insertSheet("1. Urządzenia", 1); if (kartaUrzadzenMaDane_(sheet)) { formatujArkuszUrzadzen_(sheet); ss.toast("Karta urządzeń nie została nadpisana – zmiany wprowadzaj bezpośrednio w arkuszu „1. Urządzenia”.", "🏗️ CMMS", 8); return; }
   if (sheet.getFilter()) sheet.getFilter().remove();
@@ -669,7 +691,7 @@ function pobierzRozliczeniaZHarmonogramow_(ss) {
  * Funkcja mobilna getListaPrzegladow() szuka arkusza o takiej nazwie, ale nic go nie tworzyło.
  * Arkusze są odtwarzane z "2. Harmonogram", więc rozliczenia pozostają spójne.
  */
-function generujArkuszeMiesieczne(spreadsheetObj) {
+function generujArkuszeMiesieczne__zapis(spreadsheetObj) {
   var ss = spreadsheetObj || SpreadsheetApp.getActiveSpreadsheet();
   var zrodlo = ss.getSheetByName("2. Harmonogram");
   if (!zrodlo || zrodlo.getLastRow() < 2) return;
@@ -833,7 +855,7 @@ function formatujArkuszHarmonogramu(sheet) {
 /**
  * UJEDNOLICENIE I FORMATOWANIE WSZYSTKICH HARMONOGRAMÓW W PLIKU
  */
-function naprawStruktureWszystkichHarmonogramow() {
+function naprawStruktureWszystkichHarmonogramow__zapis() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheets = ss.getSheets();
   for (var s = 0; s < sheets.length; s++) {
@@ -976,6 +998,10 @@ function pobierzDanePrzegladu(idPrzegladu) {
  * Pomocnicza funkcja pobierająca przeglądy do formularza modalnego
  */
 function pobierzWszystkiePrzegladyDoFormularza(idWymagane) {
+  if (!idWymagane) return rozpakujPrzeglady_(daneStartowe_().lista);
+  return czytajPrzegladyDoFormularza_(idWymagane);
+}
+function czytajPrzegladyDoFormularza_(idWymagane) {
   // POPRAWKA: wcześniej lista brała tylko bieżący miesiąc (1 października zaległości z września
   // znikały) i zawierała także wykonane przeglądy - kilkaset pozycji naraz.
   // Teraz: wszystkie niewykonane z terminem do 14 dni w przód + zaległe z każdego miesiąca.
@@ -1032,10 +1058,10 @@ function pobierzWszystkiePrzegladyDoFormularza(idWymagane) {
 /**
  * Pobieranie danych dla dynamicznego Formularza Mobile
  */
-function pobierzDaneDoFormularzaMobile() {
-  // POPRAWKA: wcześniej zwracało ~2000 pozycji do 31.12 z pięciu arkuszy (telefon "wisiał"
-  // na Wczytywaniu). Teraz to samo źródło co formularz w arkuszu: zaległe + dziś + 14 dni.
-  return spakujPrzeglady_(pobierzWszystkiePrzegladyDoFormularza(""));
+function pobierzDaneDoFormularzaMobile(odNowa) {
+  // zaległe + dziś + 14 dni, spakowane, z pamięci podręcznej; przycisk „Odśwież” wymusza odczyt arkusza
+  if (odNowa) wyczyscCache_(["cmms_start", "cmms_stat"]);
+  return daneStartowe_().lista;
 }
 
 /**
@@ -1081,7 +1107,7 @@ function zapiszRozliczenieMobile(payload) {
  *    przy każdym zapisie, co przy kilkuset wpisach jest kosztowne i ryzykowne),
  *  - LockService, żeby dwóch techników nie nadpisało sobie wiersza.
  */
-function zapiszRozliczenie(payload) {
+function zapiszRozliczenie__zapis(payload) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(20000);
@@ -1667,7 +1693,7 @@ function instalujWyzwalacze() {
  * NOWE: oznaczanie przeglądów po terminie jako "Zaległy".
  * Bez tego status "Zaplanowany" nigdy się nie zmieniał i wskaźniki nie pokazywały problemu.
  */
-function oznaczZalegleePrzeglady() {
+function oznaczZalegleePrzeglady__zapis() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dzis = new Date();
   dzis.setHours(0, 0, 0, 0);
@@ -2224,7 +2250,7 @@ function diagnostykaDanychCMMS() {
  * zamieniane na liczbę 1,1 - przez co "1.10" i "1.1" stają się jednym ID (8 kolizji w Krakowie).
  * Naprawa polega na odtworzeniu karty urządzeń z kolumną w formacie tekstowym.
  */
-function naprawFormatIdUrzadzen() {
+function naprawFormatIdUrzadzen__zapis() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetUrz = ss.getSheetByName("1. Urządzenia");
@@ -2254,7 +2280,7 @@ function naprawFormatIdUrzadzen() {
  * do nowych, stabilnych ID (PRZ-<urządzenie>-<data>) i przepisuje kolumnę B.
  * Wpisy, których nie da się dopasować, są oznaczane w kolumnie "Uwagi" - nic nie jest kasowane.
  */
-function migrujStareIdPrzegladow() {
+function migrujStareIdPrzegladow__zapis() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetRej = ss.getSheetByName("3. Rejestr Przeglądów");
@@ -2354,7 +2380,7 @@ function migrujStareIdPrzegladow() {
  * W kolumnie "ID Urządzenia" zdarzały się nazwy obszarów zamiast ID (np. "Kompresory").
  * Funkcja próbuje odtworzyć właściwe ID po nazwie urządzenia z karty urządzeń.
  */
-function naprawUsterkiIdUrzadzen() {
+function naprawUsterkiIdUrzadzen__zapis() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
@@ -2695,6 +2721,7 @@ function oczyscUwagi_(tekst) {
 function onEdit(e) {
   try {
     if (!e || !e.range) return;
+    wyczyscCacheDlaArkusza_(e.range.getSheet().getName());
     var sheet = e.range.getSheet();
     var nazwa = sheet.getName();
     var row = e.range.getRow();
@@ -2924,6 +2951,27 @@ function zapytajOAdresAplikacji_() {
  * Zwraca kartę maszyny i wyłącznie jej przeglądy: zaległe, dzisiejszy i najbliższy kolejny.
  */
 function pobierzPrzegladyMaszyny(idUrzadzenia) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var urz = pobierzMapeUrzadzen_(ss)[normalizujId_(idUrzadzenia)];
+  if (!urz) return { maszyna: null, przeglady: [], domyslny: "" };
+  var start = daneStartowe_();
+  var klucz = normalizujId_(urz.id);
+  var tejMaszyny = rozpakujPrzeglady_(start.lista).filter(function (p) { return normalizujId_(p.idUrzadzenia) === klucz; });
+  var doZrobienia = tejMaszyny.filter(function (p) { return p.dni <= 0; }).sort(function (a, b) { return a.dni - b.dni; });
+  var kolejne = tejMaszyny.filter(function (p) { return p.dni > 0; });
+  if (start.dalej[klucz]) kolejne.push(start.dalej[klucz]);
+  kolejne.sort(function (a, b) { return a.dni - b.dni; });
+  var nastepny = kolejne[0] || null;
+  var dzisiejszy = doZrobienia.filter(function (p) { return p.dni === 0; })[0];
+  return {
+    maszyna: urz,
+    przeglady: doZrobienia.concat(nastepny ? [nastepny] : []),
+    domyslny: dzisiejszy ? dzisiejszy.idPrzegladu : (doZrobienia[0] ? doZrobienia[0].idPrzegladu : (nastepny ? nastepny.idPrzegladu : ""))
+  };
+}
+
+/** Wersja bez pamięci podręcznej (odczyt wprost z arkusza) - zostawiona do diagnostyki. */
+function czytajPrzegladyMaszyny_(idUrzadzenia) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var mapa = pobierzMapeUrzadzen_(ss);
   var urz = mapa[normalizujId_(idUrzadzenia)];
@@ -3282,6 +3330,9 @@ var ARKUSZ_PRACOWNICY = "6. Pracownicy";
  * Lista aktywnych pracowników do formularzy (wybór z listy zamiast wpisywania nazwiska).
  */
 function pobierzPracownikow() {
+  return zCache_("cmms_prac", 1800, czytajPracownikow_);
+}
+function czytajPracownikow_() {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ARKUSZ_PRACOWNICY);
   if (!sh || sh.getLastRow() < 2) return [];
   var dane = sh.getRange(2, 1, sh.getLastRow() - 1, 2).getDisplayValues();
@@ -3303,7 +3354,7 @@ function pobierzPracownikow() {
  * W notatce przy nagłówku pokazuje nazwiska wpisywane dotąd ręcznie w Rejestrze i Usterkach -
  * żeby było widać, które warianty trzeba ujednolicić.
  */
-function utworzArkuszPracownikow() {
+function utworzArkuszPracownikow__zapis() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(ARKUSZ_PRACOWNICY);
   var nowy = false;
@@ -3391,7 +3442,7 @@ function arkuszUsterek_(ss) {
 /**
  * Zgłoszenie awarii z kodu QR - bez przeglądu, w dowolnym momencie.
  */
-function zglosAwarie(p) {
+function zglosAwarie__zapis(p) {
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {
     return { success: false, message: "System jest zajęty – spróbuj ponownie za chwilę." };
@@ -3447,7 +3498,7 @@ function zglosAwarie(p) {
  * Zmiana statusu usterki z telefonu: akcja "w_trakcie" albo "usunieta".
  * Przy zamknięciu usterki z maszyną stojącą liczy czas przestoju (od zgłoszenia do usunięcia).
  */
-function zmienStatusUsterki(p) {
+function zmienStatusUsterki__zapis(p) {
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (e) {
     return { success: false, message: "System jest zajęty – spróbuj ponownie za chwilę." };
@@ -4366,7 +4417,7 @@ function budujIdPrzegladu2_(idUrzadzenia, litera, strDate) {
   return "PRZ-" + String(idUrzadzenia).trim() + "-" + litera + "-" + String(strDate).replace(/-/g, "");
 }
 
-function generujHarmonogramV2_(spreadsheetObj) {
+function generujHarmonogramV2___zapis(spreadsheetObj) {
   var ss = spreadsheetObj || SpreadsheetApp.getActiveSpreadsheet();
   var tz = ss.getSpreadsheetTimeZone();
   var dataStart = new Date(HARM_START.getTime());
@@ -4444,6 +4495,9 @@ function generujHarmonogramV2_(spreadsheetObj) {
  * otwarte usterki i maszyny, które stoją. Czyta tylko potrzebne kolumny.
  */
 function pobierzStatystykiPrzegladow() {
+  return zCache_("cmms_stat", 60, czytajStatystykiPrzegladow_);
+}
+function czytajStatystykiPrzegladow_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dzisStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
   var wynik = { rozliczoneDzis: 0, otwarteUsterki: 0, maszynyStoja: 0 };
@@ -4550,4 +4604,168 @@ function pobierzRozliczoneDzis() {
   });
   wynik.sort(function (a, b) { return a.data < b.data ? 1 : -1; });
   return wynik;
+}
+
+/* ==========================================================================
+ *  PAMIĘĆ PODRĘCZNA (V4.11) - szybkie otwieranie aplikacji z linku i z kodu QR
+ *  Dane czytane z arkusza trafiają do CacheService (wspólnego dla wszystkich użytkowników).
+ *  Każdy zapis z aplikacji, każda funkcja menu zmieniająca dane i każda ręczna edycja
+ *  arkusza czyści pamięć, a dodatkowo wpisy wygasają same (bezpiecznik).
+ * ========================================================================== */
+
+var KLUCZE_CACHE = ["cmms_start", "cmms_mapa", "cmms_prac", "cmms_stat"];
+
+function cacheSkryptu_() { return CacheService.getScriptCache(); }
+
+/** Wartość z pamięci albo obliczona funkcją fn i zapamiętana (duże wartości dzielone na części po 90 KB). */
+function zCache_(klucz, sekundy, fn) {
+  var c = null;
+  try { c = cacheSkryptu_(); } catch (e) { return fn(); }
+  try {
+    var ile = c.get(klucz + "#n");
+    if (ile) {
+      var klucze = [];
+      for (var i = 0; i < +ile; i++) klucze.push(klucz + "#" + i);
+      var czesci = c.getAll(klucze);
+      var tekst = "", komplet = true;
+      klucze.forEach(function (k) { if (czesci[k] == null) komplet = false; else tekst += czesci[k]; });
+      if (komplet) return JSON.parse(tekst);
+    }
+  } catch (e1) {}
+  var v = fn();
+  try {
+    var s = JSON.stringify(v), CZ = 90000, wpisy = {}, n = Math.ceil(s.length / CZ) || 1;
+    if (n <= 20) {
+      for (var j = 0; j < n; j++) wpisy[klucz + "#" + j] = s.substring(j * CZ, (j + 1) * CZ);
+      c.putAll(wpisy, sekundy);
+      c.put(klucz + "#n", String(n), sekundy);
+    }
+  } catch (e2) {}
+  return v;
+}
+
+function wyczyscCache_(klucze) {
+  try {
+    var c = cacheSkryptu_();
+    (klucze || KLUCZE_CACHE).forEach(function (k) { c.remove(k + "#n"); });
+    if (!klucze || klucze.indexOf("cmms_prac") >= 0) c.put("cmms_prac_wersja", String(Date.now()), 21600);
+  } catch (e) {}
+}
+
+function wersjaPracownikow_() {
+  try { return cacheSkryptu_().get("cmms_prac_wersja") || "0"; } catch (e) { return "0"; }
+}
+
+/** Ręczna edycja arkusza (onEdit) - czyści tylko to, czego dotyczy zmieniony arkusz. */
+function wyczyscCacheDlaArkusza_(nazwa) {
+  if (czyArkuszHarmonogramu_(nazwa)) wyczyscCache_(["cmms_start", "cmms_stat"]);
+  else if (nazwa === "1. Urządzenia") wyczyscCache_(["cmms_mapa", "cmms_start"]);
+  else if (nazwa === ARKUSZ_PRACOWNICY) wyczyscCache_(["cmms_prac"]);
+  else if (nazwa.indexOf("3. Rejestr") === 0 || nazwa.indexOf("4. Usterki") === 0) wyczyscCache_(["cmms_stat"]);
+}
+
+/** Menu: ręczne wyczyszczenie pamięci (np. po zmianach wprowadzonych skryptem albo importem). */
+function wyczyscPamiecAplikacji() {
+  wyczyscCache_();
+  SpreadsheetApp.getActiveSpreadsheet().toast("Pamięć podręczna aplikacji wyczyszczona – następne otwarcie przeczyta arkusz od nowa.", "⚡ CMMS", 5);
+}
+
+/**
+ * Dane startowe aplikacji, liczone JEDNYM odczytem harmonogramu (kolumny A–I) i trzymane w pamięci:
+ *  - lista: niewykonane przeglądy zaległe + do 14 dni (spakowane jak dla aplikacji),
+ *  - dalej: dla każdej maszyny najbliższy przegląd później niż za 14 dni (potrzebny po skanie QR).
+ * Klucz zawiera datę, więc po północy liczy się od nowa (zmienia się liczba dni do terminu).
+ */
+function daneStartowe_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dzisStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
+  var d = zCache_("cmms_start", 900, function () { return liczDaneStartowe_(ss, dzisStr); });
+  if (d && d.dzien !== dzisStr) {
+    wyczyscCache_(["cmms_start"]);
+    d = zCache_("cmms_start", 900, function () { return liczDaneStartowe_(ss, dzisStr); });
+  }
+  return d;
+}
+
+function liczDaneStartowe_(ss, dzisStr) {
+  var HORYZONT_DNI = 14;
+  var wynik = { dzien: dzisStr, lista: spakujPrzeglady_([]), dalej: {} };
+  var sheet = ss.getSheetByName("2. Harmonogram");
+  if (!sheet) { wynik.lista = spakujPrzeglady_(czytajPrzegladyDoFormularza_("")); return wynik; }
+  if (sheet.getLastRow() < 2) return wynik;
+  var dzis = new Date(dzisStr + "T00:00:00").getTime();
+  var dane = sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).getDisplayValues();
+  var lista = [];
+  for (var i = 0; i < dane.length; i++) {
+    var r = dane[i];
+    var id = String(r[0] || "").trim();
+    if (!id || String(r[8]).trim().toLowerCase() === "wykonany") continue;
+    var dataStr = String(r[6] || "").trim().substring(0, 10);
+    var t = new Date(dataStr + "T00:00:00").getTime();
+    if (isNaN(t)) continue;
+    var dni = Math.round((t - dzis) / 86400000);
+    var p = {
+      idPrzegladu: id, idUrzadzenia: String(r[1] || "").trim(), obszar: String(r[2] || "").trim(),
+      nazwaUrzadzenia: String(r[3] || "").trim(), czestotliwosc: String(r[4] || "").trim(), zakres: String(r[5] || "").trim(),
+      dataPlanowana: dataStr, status: String(r[8] || "").trim(), czyWykonany: false, dni: dni,
+      kategoria: dni < 0 ? "zalegly" : (dni === 0 ? "dzis" : "nadchodzacy")
+    };
+    if (dni <= HORYZONT_DNI) { lista.push(p); continue; }
+    var k = normalizujId_(p.idUrzadzenia);
+    if (!wynik.dalej[k] || dni < wynik.dalej[k].dni) { p.zakres = ""; wynik.dalej[k] = p; }
+  }
+  lista.sort(function (a, b) {
+    if (a.dni !== b.dni) return a.dni - b.dni;
+    if (a.obszar !== b.obszar) return a.obszar.localeCompare(b.obszar);
+    return a.nazwaUrzadzenia.localeCompare(b.nazwaUrzadzenia);
+  });
+  wynik.lista = spakujPrzeglady_(lista);
+  return wynik;
+}
+
+/** Odwrotność spakujPrzeglady_ (po stronie serwera). */
+function rozpakujPrzeglady_(d) {
+  return ((d && d.w) || []).map(function (w) {
+    var m = d.m[w[1]] || ["", ""], dni = w[4], wyk = w[6] === 1;
+    return { idPrzegladu: w[0], idUrzadzenia: w[1], nazwaUrzadzenia: m[0], obszar: m[1], czestotliwosc: w[2],
+             dataPlanowana: w[3], dni: dni, zakres: d.z[w[5]] || "", czyWykonany: wyk, status: wyk ? "Wykonany" : "",
+             kategoria: wyk ? "wykonany" : (dni < 0 ? "zalegly" : (dni === 0 ? "dzis" : "nadchodzacy")) };
+  });
+}
+
+function zapiszRozliczenie() {
+  try { return zapiszRozliczenie__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function generujHarmonogramV2_() {
+  try { return generujHarmonogramV2___zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function generujArkuszeMiesieczne() {
+  try { return generujArkuszeMiesieczne__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function oznaczZalegleePrzeglady() {
+  try { return oznaczZalegleePrzeglady__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function migrujStareIdPrzegladow() {
+  try { return migrujStareIdPrzegladow__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function naprawFormatIdUrzadzen() {
+  try { return naprawFormatIdUrzadzen__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function aktualizujKarteUrzadzenKrakow() {
+  try { return aktualizujKarteUrzadzenKrakow__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function utworzArkuszPracownikow() {
+  try { return utworzArkuszPracownikow__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function zglosAwarie() {
+  try { return zglosAwarie__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function zmienStatusUsterki() {
+  try { return zmienStatusUsterki__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function naprawUsterkiIdUrzadzen() {
+  try { return naprawUsterkiIdUrzadzen__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+function naprawStruktureWszystkichHarmonogramow() {
+  try { return naprawStruktureWszystkichHarmonogramow__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
 }

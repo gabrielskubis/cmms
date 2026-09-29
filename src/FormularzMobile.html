@@ -873,7 +873,7 @@
     $('btnDom').addEventListener('click', ekranGlowny);
     $('btnDom2').addEventListener('click', ekranGlowny);
     $('btnUsterki').addEventListener('click', function () { ustawTryb(tryb === 'usterki' ? 'dozrobienia' : 'usterki'); });
-    $('btnOdswiez').addEventListener('click', odswiezListe);
+    $('btnOdswiez').addEventListener('click', function () { odswiezListe(true); });
     $('toastZamknij').addEventListener('click', function () { komunikat(''); });
     $('szukaj').addEventListener('input', render);
     $('chipyTryb').addEventListener('click', function (e) {
@@ -1687,7 +1687,7 @@
       });
   }
 
-  function odswiezListe() {
+  function odswiezListe(odNowa) {
     $('btnOdswiez').disabled = true;
     $('btnOdswiez').classList.add('kreci');
     RUN
@@ -1706,7 +1706,7 @@
         komunikat('❌ Nie udało się odświeżyć listy: ' + err.message, 'k-bl', { etykieta: 'Spróbuj ponownie', fn: odswiezListe }, true);
         if (!PRZEGLADY.length) $('lista').innerHTML = '<div class="pusto">Brak połączenia z arkuszem.<br><button type="button" class="link" onclick="odswiezListe()">↻ Spróbuj ponownie</button></div>';
       })
-      .pobierzDaneDoFormularzaMobile();
+      .pobierzDaneDoFormularzaMobile(odNowa === true);
   }
 
   // ---------- PRACOWNICY ----------
@@ -1924,7 +1924,7 @@
     if (wPolu(e)) return;
     var k = String(e.key || '').toLowerCase();
     if (k === '/') { e.preventDefault(); $('szukaj').focus(); return; }
-    if (k === 'r') { odswiezListe(); return; }
+    if (k === 'r') { odswiezListe(true); return; }
     if (k === 'arrowdown' || k === 'arrowup' || k === 'j' || k === 'k') {
       if (TRYB_MASZYNY || tryb === 'usterki' || tryb === 'rozliczone') return;
       e.preventDefault();
