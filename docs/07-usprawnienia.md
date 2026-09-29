@@ -78,6 +78,12 @@ Warunek: Google podaje mail tylko, gdy aplikację wdrożyło konto z tej samej d
 
 Sprawdzone automatycznie (przeglądarka, telefon 390 px i laptop 1600 px, dane z arkusza Nowa Huta, atrapa serwera): 16 kroków nawigacji na telefonie, 13 na laptopie, 4 w trybie QR, 22 stany błędów i paneli pośrednich, 11 w Panelu Zarządu.
 
+## 1d. Kafle i zapis (wersja 4.10.2)
+
+- **Każdy kafel w nagłówku prowadzi do tego, co pokazuje**: Zaległe → lista zaległych, Na dziś → dzisiejsze, **Rozliczone dziś → nowa lista rozliczeń z dziś** (godzina, wykonawca, czas, OK/NOK, checklista; kliknięcie otwiera historię maszyny), Otwarte usterki → lista do obsługi. Aktywny kafel jest podświetlony, strzałka → pokazuje, że da się kliknąć; kliknięcie zamyka otwarty przegląd, żeby było jasne, co jest na ekranie.
+- **Zapis bez półprzezroczystego komunikatu**: „Zapisywanie…” z kręciołkiem pokazuje się na klikniętym przycisku; wynik jako pełny, kontrastowy komunikat.
+- Poprawka: po nieudanym zapisie z komunikatem DTR przycisk „Potwierdzam” nie przestaje działać (panel wraca do przycisków wyniku).
+
 ## 2. Propozycje kolejnych usprawnień
 
 Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do którego celu SMART się przyczynia.

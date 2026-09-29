@@ -4526,3 +4526,28 @@ function pobierzOtwarteUsterki() {
   });
   return wynik;
 }
+
+/**
+ * Przeglądy rozliczone dziś (wpisy w "3. Rejestr Przeglądów" z dzisiejszą datą) - kafel "Rozliczone dziś".
+ */
+function pobierzRozliczoneDzis() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var rej = ss.getSheetByName("3. Rejestr Przeglądów");
+  if (!rej || rej.getLastRow() < 2) return [];
+  var dzisStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
+  var mapa = pobierzMapeUrzadzen_(ss);
+  var wynik = [];
+  rej.getRange(2, 1, rej.getLastRow() - 1, 11).getDisplayValues().forEach(function (r) {
+    var data = String(r[5]).trim();
+    if (data.substring(0, 10) !== dzisStr) return;
+    var u = mapa[normalizujId_(r[2])] || null;
+    wynik.push({
+      id: String(r[0]).trim(), idPrzegladu: String(r[1]).trim(), idUrzadzenia: u ? u.id : String(r[2]).trim(),
+      nazwa: String(r[4]).trim() || (u ? u.nazwa : ""), obszar: String(r[3]).trim() || (u ? u.obszar : ""),
+      znanaMaszyna: !!u, data: data, wykonawca: String(r[6]).trim(), czas: String(r[7]).trim(),
+      nok: String(r[8]).trim().toUpperCase() === "NOK", opis: String(r[9]).trim()
+    });
+  });
+  wynik.sort(function (a, b) { return a.data < b.data ? 1 : -1; });
+  return wynik;
+}
