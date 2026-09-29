@@ -174,16 +174,18 @@ function rozpoznajPracownikaWArkuszu_(sh, emailNorm) {
   }
 }
 
-function doGet(e) {
-  if (e && e.parameter && e.parameter.panel === "zarzad") return doGetPanelZarzadu2_(e);
+/**
+ * Jeden interfejs rozliczania dla strony (Web App / kod QR) i dla okna w arkuszu.
+ *  param  - ID urządzenia (tryb maszyny, jak po skanie QR) albo ID przeglądu "PRZ-…" (od razu otwarty)
+ *  zrodlo - "telefon" (strona) albo "arkusz" (okno w arkuszu) - trafia do rozliczenia i usterki
+ */
+function szablonAplikacji_(param, _nieuzywany, zrodlo) {
   var template = HtmlService.createTemplateFromFile('FormularzMobile');
-  var param = (e && e.parameter && e.parameter.id) ? String(e.parameter.id).trim() : "";
-
+  template.zrodlo = zrodlo || "telefon";
+  template.trybDialog = zrodlo === "arkusz";
   try {
-    // Wszystko, czego strona potrzebuje na start, idzie w JEDNEJ odpowiedzi (bez dodatkowych zapytań):
-    //  - skan QR maszyny: tylko przeglądy tej maszyny (bez czytania całej listy),
-    //  - zwykłe wejście: lista w wersji spakowanej (opis czynności raz na maszynę, nie przy każdym terminie).
-    //  - dane z pamięci podręcznej (CacheService) - arkusz czytany tylko po zmianach
+    // Wszystko, czego strona potrzebuje na start, idzie w JEDNEJ odpowiedzi (bez dodatkowych zapytań),
+    // z pamięci podręcznej (CacheService) - arkusz czytany tylko po zmianach.
     var pakiet = { v: 2, z: [], m: {}, w: [] }, wybrane = "", startMaszyny = null;
     if (param && param.indexOf("PRZ-") !== 0) {
       startMaszyny = pobierzPrzegladyMaszyny(param);
@@ -194,7 +196,6 @@ function doGet(e) {
         pakiet = spakujPrzeglady_(czytajPrzegladyDoFormularza_(wybrane));
       }
     }
-
     template.pobranePrzeglady = pakiet;
     template.startMaszyny = startMaszyny;
     template.pracownicy = pobierzPracownikow();
@@ -213,9 +214,8 @@ function doGet(e) {
     template.zalogowanyEmail = emailZalogowanego;
     template.zalogowanyNazwisko = osoba.nazwisko;
     template.zalogowanyStatus = osoba.status;
-
   } catch (err) {
-    Logger.log("Błąd w doGet: " + err.message);
+    Logger.log("Błąd przygotowania aplikacji: " + err.message);
     template.pobranePrzeglady = [];
     template.wybraneId = "";
     template.parametrQR = param;
@@ -226,7 +226,13 @@ function doGet(e) {
     template.startMaszyny = null;
     template.pracownicy = null;
   }
+  return template;
+}
 
+function doGet(e) {
+  if (e && e.parameter && e.parameter.panel === "zarzad") return doGetPanelZarzadu2_(e);
+  var param = (e && e.parameter && e.parameter.id) ? String(e.parameter.id).trim() : "";
+  var template = szablonAplikacji_(param, "", "telefon");
   return template.evaluate()
       .setTitle('CMMS Holcim – Przeglądy')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
@@ -893,36 +899,20 @@ function naprawStruktureWszystkichHarmonogramow__zapis() {
  * Wyświetlanie formularza wewnątrz arkusza Google Sheets (modal dialog)
  */
 function pokazFormularzPrzegladu() {
+  // To samo rozliczanie co w aplikacji na telefonie (checklista, części, awarie, wykonawca z konta…),
+  // otwarte w oknie arkusza. Kursor w harmonogramie -> ten przegląd; w innej zakładce na wierszu maszyny -> ta maszyna.
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var activeSheet = ss.getActiveSheet();
-  var nazwa = activeSheet.getName();
-  var autoSelectedId = "";
-
-  var activeRow = activeSheet.getActiveCell().getRow();
-  if (activeRow >= 2) {
-    if (czyArkuszHarmonogramu_(nazwa)) {
-      // kursor w harmonogramie -> ten konkretny przegląd
-      autoSelectedId = String(activeSheet.getRange(activeRow, 1).getDisplayValue()).trim();
-    } else if (nazwa === "1. Urządzenia") {
-      // kursor w karcie urządzeń -> najpilniejszy przegląd tej maszyny
-      var idUrz = String(activeSheet.getRange(activeRow, 1).getDisplayValue()).trim();
-      autoSelectedId = rozwinParametrQR_(idUrz, pobierzWszystkiePrzegladyDoFormularza(""));
-    }
+  var sh = ss.getActiveSheet();
+  var nazwa = sh.getName();
+  var wiersz = sh.getActiveCell().getRow();
+  var param = "";
+  if (wiersz >= 2) {
+    if (czyArkuszHarmonogramu_(nazwa)) param = String(sh.getRange(wiersz, 1).getDisplayValue()).trim();
+    if (!param || param.indexOf("PRZ-") !== 0) param = wykryjMaszyneZArkusza_(sh, nazwa, wiersz) || "";
   }
-
-  var ostatniWykonawca = "";
-  try { ostatniWykonawca = PropertiesService.getUserProperties().getProperty("CMMS_WYKONAWCA") || ""; } catch (e) {}
-
-  var template = HtmlService.createTemplateFromFile('FormularzPrzegladu');
-  template.dane = { idPrzegladu: autoSelectedId, ostatniWykonawca: ostatniWykonawca }; template.wybranaMaszyna = wykryjMaszyneZArkusza_(activeSheet, nazwa, activeRow);
-  template.pobranePrzeglady = pobierzWszystkiePrzegladyDoFormularza(autoSelectedId);
-
-  var html = template.evaluate()
-      .setWidth(1000)
-      .setHeight(680)
-      .setTitle('📝 Rozliczenie Przeglądu CMMS');
-
-  SpreadsheetApp.getUi().showModalDialog(html, '📝 Rozliczenie Przeglądu CMMS');
+  var html = szablonAplikacji_(param, "", "arkusz").evaluate()
+    .setWidth(1280).setHeight(780).setTitle("📝 Rozliczenie przeglądu");
+  SpreadsheetApp.getUi().showModalDialog(html, "📝 Rozliczenie przeglądu – CMMS");
 }
 
 /**
@@ -1112,7 +1102,8 @@ function zapiszRozliczenieMobile(payload) {
     wynik: okStatus,
     priorytet: payload.priorytet || "Średni",
     opisUsterki: payload.opisUsterki || "",
-    zalecenia: payload.zalecenia || "", potwierdzenieDTR: payload.potwierdzenieDTR === true, zrodlo: "telefon"
+    zalecenia: payload.zalecenia || "", potwierdzenieDTR: payload.potwierdzenieDTR === true,
+    zrodlo: payload.zrodlo === "arkusz" ? "arkusz" : "telefon", maszynaStoi: payload.maszynaStoi === true
   });
 }
 /**
@@ -1249,11 +1240,7 @@ function zapiszRozliczenie__zapis(payload) {
 
     // 3. Rejestracja w module "4. Usterki i Awarie" oraz wysyłka maila
     if (statusKod === "NOK") {
-      var sheetUsterki = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
-      if (!sheetUsterki) {
-        sheetUsterki = ss.insertSheet("4. Usterki i Awarie");
-        sheetUsterki.appendRow(NAGLOWKI_USTERKI);
-      }
+      var sheetUsterki = arkuszUsterek_(ss);   // tworzy arkusz i kolumny M–O (Źródło, Maszyna stoi, Czas przestoju), jeśli trzeba
 
       var idUsterki = generujUnikalneId_("UST");
       var priorytetTxt = payload.priorytet || payload.priorytetUsterki || "Średni";
@@ -1273,12 +1260,15 @@ function zapiszRozliczenie__zapis(payload) {
         "Zgłoszona",
         "",
         "",
+        "",
+        "Przegląd (" + (payload.zrodlo === "arkusz" ? "arkusz" : "telefon") + ")",
+        payload.maszynaStoi === true ? "TAK" : "NIE",
         ""
       ]);
       sheetUsterki.getRange(sheetUsterki.getLastRow(), 3).setNumberFormat("@");
 
       try {
-        var tematyka = "⚠️ [CMMS AWARIA] Zgłoszono usterkę NOK: " + (payload.nazwaUrzadzenia || idSzukane);
+        var tematyka = (payload.maszynaStoi === true ? "⛔ MASZYNA STOI – " : "⚠️ ") + "[CMMS AWARIA] Zgłoszono usterkę NOK: " + (payload.nazwaUrzadzenia || idSzukane);
         var trescHTML =
           "<div style='font-family: Arial, sans-serif; padding: 20px; border: 2px solid #ef4444; border-radius: 8px; background-color: #fef2f2;'>" +
             "<h2 style='color: #991b1b; margin-top: 0;'>⚠️ Wykryto usterkę / awarię podczas przeglądu (NOK)</h2>" +

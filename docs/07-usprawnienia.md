@@ -95,6 +95,12 @@ Zmienia tylko wygląd, układ i widoki — dane, nazwy zakładek i kolumny, z kt
 - **Ochrona ostrzeżeniem** (nie blokuje): kolumny planu w harmonogramach (A–G), ID w Rejestrze, Urządzeniach i Usterkach, widoki Start/Dziś — Sheets pyta przed zmianą.
 - **Menu** uporządkowane: na górze Start, Dziś, aplikacja, rozliczenie, odświeżenie wyglądu; reszta w podmenu tematycznych.
 
+## 1f. Jedno rozliczanie w arkuszu i na stronie
+
+- „⚙️ CMMS System → 📝 Rozlicz przegląd w arkuszu” otwiera **tę samą aplikację** co telefon/QR (w oknie 1280×780): checklista ✓/⚠, pole części, zgłoszenie awarii, obsługa usterek, historia maszyny, wykonawca z konta Google, domyślny czas, DTR raz dziennie. Kursor na przeglądzie w harmonogramie → ten przegląd; na wierszu maszyny w innej zakładce → karta tej maszyny. Przycisk „✕ Zamknij”.
+- Zgłoszenie problemu z przeglądu ma pole **„Czy maszyna stoi?”** (TAK → priorytet Wysoki, mail „⛔ MASZYNA STOI”); w „4. Usterki i Awarie” zapisuje się **Źródło** („Przegląd (telefon)” / „Przegląd (arkusz)”) i **Maszyna stoi** — czas przestoju policzy się przy zamknięciu.
+- `FormularzPrzegladu.html` nie jest już używany (zostaje w projekcie, można go usunąć).
+
 ## 2. Propozycje kolejnych usprawnień
 
 Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do którego celu SMART się przyczynia.

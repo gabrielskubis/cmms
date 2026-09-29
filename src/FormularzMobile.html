@@ -446,6 +446,7 @@
     <button type="button" class="ikbtn" id="btnDom2" title="Ekran główny">⌂<span class="etk">Start</span></button>
     <button type="button" class="ikbtn" id="btnOdswiez" title="Odśwież listę (R)"><span class="ik-odsw">↻</span><span class="etk">Odśwież</span></button>
     <button type="button" class="ikbtn" id="btnMotyw" title="Motyw jasny / ciemny">◐</button>
+    <button type="button" class="ikbtn" id="btnZamknijOkno" title="Zamknij okno" hidden>✕<span class="etk">Zamknij</span></button>
   </div>
 </header>
 
@@ -566,6 +567,11 @@
               <div class="ramka problem-box" id="panelProblem" hidden>
                 <h3>⚠️ Co jest nie tak?</h3>
                 <div id="problemPunktyInfo" style="font-size:.88rem;"></div>
+                <label>Czy maszyna stoi?</label>
+                <div class="wyniki" id="stoiPrzeglad">
+                  <button type="button" class="wyn nok" data-s="TAK">⛔ TAK, stoi</button>
+                  <button type="button" class="wyn ok active" data-s="NIE">NIE, pracuje</button>
+                </div>
                 <label>Priorytet</label>
                 <div class="prio" id="prioPrzeglad">
                   <button type="button" data-p="Niski">Niski</button>
@@ -635,6 +641,8 @@
 
 <script>
   var PRZEGLADY = rozpakuj(<?!= JSON.stringify(pobranePrzeglady || []).replace(/</g, '\\u003c') ?>);
+  var ZRODLO = <?!= JSON.stringify(typeof zrodlo !== 'undefined' && zrodlo ? zrodlo : 'telefon') ?>;   // telefon | arkusz
+  var TRYB_DIALOG = ZRODLO === 'arkusz';   // otwarte jako okno w arkuszu Google
   var START_MASZYNY = <?!= JSON.stringify(startMaszyny || null).replace(/</g, '\\u003c') ?>;
   var PRACOWNICY_START = <?!= JSON.stringify(pracownicy || null).replace(/</g, '\\u003c') ?>;
 
@@ -679,6 +687,7 @@
   var priorytet = 'Średni';
   var priorytetAwarii = 'Średni';
   var maszynaStoi = false;
+  var stoiPrzeglad = false;       // „maszyna stoi” przy usterce zgłaszanej z przeglądu
   var TRYB_MASZYNY = !!(PARAM_QR && PARAM_QR.indexOf('PRZ-') !== 0);   // kod QR niesie ID URZĄDZENIA (np. 1.12)
   var MASZYNA = null;             // {id, nazwa, obszar} – maszyna, której dotyczą szczegóły
   var PRACOWNICY = [];
@@ -870,6 +879,14 @@
 
     obszar = odczytaj('cmms_obszar');
     $('btnMotyw').addEventListener('click', przelaczMotyw);
+    if (TRYB_DIALOG) {
+      pokaz('btnZamknijOkno', true);
+      $('btnZamknijOkno').addEventListener('click', function () {
+        if (potwierdzPorzucenie()) { try { google.script.host.close(); } catch (e) {} }
+      });
+      $('etykQr').textContent = '🏭 Maszyna z zaznaczonego wiersza';
+      $('btnInnaMaszyna').textContent = 'Pokaż wszystkie przeglądy';
+    }
     $('btnDom').addEventListener('click', ekranGlowny);
     $('btnDom2').addEventListener('click', ekranGlowny);
     $('btnUsterki').addEventListener('click', function () { ustawTryb(tryb === 'usterki' ? 'dozrobienia' : 'usterki'); });
@@ -958,6 +975,11 @@
     $('btnDtrTak').addEventListener('click', potwierdzIZapisz);
     $('btnDtrNie').addEventListener('click', anulujDtr);
     wlaczPrzyciskiPrio('prioPrzeglad', function (p) { priorytet = p; });
+    $('stoiPrzeglad').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-s]'); if (!b) return;
+      ustawStoiPrzeglad(b.getAttribute('data-s') === 'TAK');
+      if (stoiPrzeglad) ustawPrio('prioPrzeglad', 'Wysoki', function (p) { priorytet = p; });
+    });
     wlaczPrzyciskiPrio('prioAwaria', function (p) { priorytetAwarii = p; });
     document.querySelectorAll('.stoiBtn').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -1069,7 +1091,8 @@
   // ---------- NAWIGACJA: przycisk / gest „wstecz” ----------
   // Każdy ekran (lista, przegląd, zakładka, lista usterek) to krok w historii przeglądarki,
   // więc systemowe „wstecz” wraca do poprzedniego ekranu zamiast zamykać aplikację.
-  var HIST = (window.google && google.script && google.script.history) || null;
+  var HIST = null;
+  try { HIST = (!TRYB_DIALOG && window.google && google.script && google.script.history) || null; } catch (e) { HIST = null; }
   var przywracanie = false, zamienKrok = false, ostatniKrok = '';
   function stanEkranu() {
     return { w: MASZYNA ? 'szcz' : 'lista', t: tryb, id: wybranyId, u: wybranaUsterka, z: zakladka, q: TRYB_MASZYNY ? 1 : 0 };
@@ -1113,7 +1136,7 @@
       przywracanie = false;
     }
   }
-  if (HIST && HIST.setChangeHandler) HIST.setChangeHandler(function (e) { przywrocStan(e && e.state); });
+  try { if (HIST && HIST.setChangeHandler) HIST.setChangeHandler(function (e) { przywrocStan(e && e.state); }); } catch (e) { HIST = null; }
 
   // ---------- EKRAN GŁÓWNY ----------
   function ekranGlowny() {
@@ -1496,6 +1519,10 @@
     $('szybkieCzasy').querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-v') === v); });
   }
 
+  function ustawStoiPrzeglad(tak) {
+    stoiPrzeglad = tak;
+    $('stoiPrzeglad').querySelectorAll('button').forEach(function (x) { x.classList.toggle('active', (x.getAttribute('data-s') === 'TAK') === tak); });
+  }
   function zerujEkranRozl() {
     oczekujacyZapis = null;
     bladRozl('');
@@ -1506,6 +1533,7 @@
     $('opis').value = '';
     $('opisUsterki').value = ''; $('zalecenia').value = '';
     ustawPrio('prioPrzeglad', 'Średni', function (p) { priorytet = p; });
+    ustawStoiPrzeglad(false);
   }
 
   function wroc() {
@@ -1683,6 +1711,8 @@
         priorytet: priorytet,
         opisUsterki: opisUsterki,
         zalecenia: hasUsterka ? $('zalecenia').value.trim() : '',
+        maszynaStoi: hasUsterka && stoiPrzeglad,
+        zrodlo: ZRODLO,
         potwierdzenieDTR: true
       });
   }
