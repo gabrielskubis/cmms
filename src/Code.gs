@@ -4851,6 +4851,8 @@ function przejdzDoWidokuDzis() {
 
 /* ---------- pomocnicze do formuł ---------- */
 
+/** Polska nazwa dnia tygodnia w formule (TEXT(…,"dddd") zależy od ustawień regionalnych pliku). */
+function fDzien_(x) { return 'CHOOSE(WEEKDAY(' + x + ',2),"poniedziałek","wtorek","środa","czwartek","piątek","sobota","niedziela")'; }
 function refArkusza_(nazwa) { return "'" + String(nazwa).replace(/'/g, "''") + "'!"; }
 function nazwaArkuszaUsterek_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -4907,7 +4909,7 @@ function zbudujStart_() {
   sh.getRange("B2:J2").merge().setValue("📋  CMMS · Utrzymanie Ruchu — Kraków Nowa Huta")
     .setFontSize(20).setFontWeight("bold").setFontColor(PALETA.granat);
   sh.setRowHeight(2, 42);
-  sh.getRange("B3:J3").merge().setFormula('="Stan na " & TEXT(NOW(),"dddd, dd.mm.yyyy") & ", godz. " & TEXT(NOW(),"HH:mm") & "   ·   liczby liczą się same przy każdej zmianie w arkuszu"')
+  sh.getRange("B3:J3").merge().setFormula('="Stan na: " & ' + fDzien_("NOW()") + ' & ", " & TEXT(NOW(),"dd.mm.yyyy") & ", godz. " & TEXT(NOW(),"HH:mm") & "   ·   liczby liczą się same przy każdej zmianie w arkuszu"')
     .setFontSize(10).setFontColor(PALETA.szary);
   sh.setRowHeight(4, 14);
 
@@ -4934,7 +4936,7 @@ function zbudujStart_() {
       .setBorder(true, true, true, true, null, null, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
     sh.getRange(5, k.kol).setValue("  " + k.et).setFontSize(8).setFontWeight("bold").setFontColor(PALETA.szary).setVerticalAlignment("bottom");
     sh.getRange(6, k.kol).setFormula('=HYPERLINK("' + k.link + '","  "&' + k.f + ')')
-      .setFontSize(30).setFontWeight("bold").setFontColor(k.kolor).setVerticalAlignment("middle");
+      .setFontSize(30).setFontWeight("bold").setFontColor(k.kolor).setVerticalAlignment("middle").setFontLine("none");
     sh.getRange(7, k.kol).setFormula(k.pod.replace(/^=/, '="  "&')).setFontSize(9).setFontColor(PALETA.szary).setVerticalAlignment("top");
   });
   // pasek koloru pod kaflem
@@ -4961,7 +4963,7 @@ function zbudujStart_() {
       else cel = linkDoArkusza_(b[0]);
       if (cel) c.setFormula(hiperlacze_(cel, b[1])).setBackground(b[2]).setFontColor("#ffffff");
       else c.setValue(b[1] + (b[0].charAt(0) === "@" ? " (ustaw adres)" : " (brak)")).setBackground("#cbd5e1").setFontColor("#475569");
-      c.setFontSize(10).setFontWeight("bold").setHorizontalAlignment("center");
+      c.setFontSize(10).setFontWeight("bold").setHorizontalAlignment("center").setFontLine("none");
     });
   });
   sh.setRowHeight(12, 8);
@@ -5029,10 +5031,10 @@ function zbudujDzis_() {
   var dG = fData_(H + "G2:G"), dU = fData_(U + "B2:B");
 
   // A | B-F dziś | G | H-M zaległe | N | O-U usterki | V
-  [12, 60, 220, 120, 90, 90, 16, 60, 200, 110, 80, 70, 60, 16, 190, 55, 260, 75, 95, 60, 55, 12]
+  [12, 55, 250, 125, 95, 110, 16, 55, 250, 130, 80, 60, 50, 16, 230, 55, 280, 75, 90, 50, 50, 12]
     .forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
 
-  sh.getRange("B1:U1").merge().setFormula('="📅  Dziś · " & TEXT(TODAY(),"dddd, dd.mm.yyyy")')
+  sh.getRange("B1:U1").merge().setFormula('="📅  Dziś · " & ' + fDzien_("TODAY()") + ' & ", " & TEXT(TODAY(),"dd.mm.yyyy")')
     .setFontSize(18).setFontWeight("bold").setFontColor(PALETA.granat);
   sh.setRowHeight(1, 44);
   sh.getRange("B2:U2").merge().setValue("Widok liczy się sam z Harmonogramu i Usterek. Rozliczenia i obsługa usterek — w aplikacji. Kliknij nagłówek sekcji, żeby przejść do pełnej zakładki.")
@@ -5062,25 +5064,25 @@ function zbudujDzis_() {
     var cel = linkDoArkusza_(s.cel);
     sh.getRange(4, s.od, 1, s.szer).merge()
       .setFormula('=HYPERLINK("' + cel + '",' + s.tytul.replace(/^=/, "") + ')')
-      .setFontSize(11).setFontWeight("bold").setFontColor("#ffffff").setBackground(s.kolor);
+      .setFontSize(11).setFontWeight("bold").setFontColor("#ffffff").setBackground(s.kolor).setFontLine("none");
     sh.getRange(5, s.od, 1, s.szer).setValues([s.nagl]).setFontSize(8).setFontWeight("bold")
       .setFontColor(PALETA.szary).setBackground(s.tlo)
       .setBorder(null, null, true, null, null, null, s.kolor, SpreadsheetApp.BorderStyle.SOLID);
     sh.getRange(6, s.od).setFormula(s.f);
     var cialo = sh.getRange(6, s.od, WIER - 5, s.szer);
-    cialo.setFontSize(10).setVerticalAlignment("middle")
+    cialo.setFontSize(10).setVerticalAlignment("middle").setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP)
       .setBorder(null, null, null, null, null, true, "#eef2f7", SpreadsheetApp.BorderStyle.SOLID);
   });
   // formaty kolumn
   sh.getRange("B6:B").setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat("@");
-  sh.getRange("C6:C").setWrap(true).setFontWeight("bold");
+  sh.getRange("C6:C").setFontWeight("bold");
   sh.getRange("H6:H").setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat("@");
-  sh.getRange("I6:I").setWrap(true).setFontWeight("bold");
+  sh.getRange("I6:I").setFontWeight("bold");
   sh.getRange("L6:L").setNumberFormat("dd.mm").setHorizontalAlignment("center");
   sh.getRange("M6:M").setNumberFormat("0").setHorizontalAlignment("center").setFontWeight("bold");
-  sh.getRange("O6:O").setWrap(true).setFontWeight("bold");
+  sh.getRange("O6:O").setFontWeight("bold");
   sh.getRange("P6:P").setHorizontalAlignment("center").setNumberFormat("@");
-  sh.getRange("Q6:Q").setWrap(true).setFontSize(9);
+  sh.getRange("Q6:Q").setFontSize(9);
   sh.getRange("R6:U").setHorizontalAlignment("center");
   sh.getRange("U6:U").setNumberFormat("0");
 
@@ -5095,6 +5097,7 @@ function zbudujDzis_() {
     SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("Zgłoszona").setBackground(PALETA.czerwonyTlo).setFontColor("#991b1b").setRanges([r("S6:S")]).build(),
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$U6>7').setFontColor(PALETA.czerwony).setBold(true).setRanges([r("U6:U")]).build()
   ]);
+  sh.setRowHeights(6, WIER - 5, 24);
   sh.setFrozenRows(5);
   sh.setTabColor(PALETA.dzis);
 }
