@@ -4824,7 +4824,7 @@ function nowyWygladArkusza() {
   if (urz) krokW("Urządzenia", function () { formatujArkuszUrzadzen_(urz); });
   krokW("Usterki", function () { formatujArkuszUsterek(); });
   krokW("Rejestr", stylRejestru_);
-  krokW("Terminy", function () { var t = ss.getSheetByName(ARKUSZ_TERMINY); if (t) stylOgolny_(t, PALETA.terminy, { zamrozKolumny: 3 }); });
+  krokW("Terminy", function () { var t = ss.getSheetByName(ARKUSZ_TERMINY); if (t) { naprawFormulyTerminow_(t); stylOgolny_(t, PALETA.terminy, { zamrozKolumny: 3 }); } });
   krokW("Pracownicy", function () { var t = ss.getSheetByName(ARKUSZ_PRACOWNICY); if (t) stylOgolny_(t, PALETA.pracownicy, { zamrozKolumny: 1 }); });
   krokW("Dashboard", function () { var t = ss.getSheetByName("0. Dashboard CMMS"); if (t) t.setHiddenGridlines(true); });
   krokW("Kolejność zakładek", function () { porzadekZakladek_(true); });
@@ -5123,8 +5123,13 @@ function stylOgolny_(sh, kolor, opcje) {
     var bd = sh.getRange(1, 1, lastRow, lastCol).applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, true, false);
     bd.setHeaderRowColor(kolor).setFirstRowColor("#ffffff").setSecondRowColor(PALETA.jasny);
   }
-  if (!sh.getFilter()) { try { sh.getRange(1, 1, lastRow, lastCol).createFilter(); } catch (e) {} }
+  ustawFiltr_(sh, sh.getRange(1, 1, lastRow, lastCol));
   sh.setTabColor(kolor);
+}
+
+/** Zakłada filtr na zakresie; istniejący filtr w arkuszu jest najpierw usuwany (arkusz może mieć tylko jeden). */
+function ustawFiltr_(sh, zakres) {
+  try { var f = sh.getFilter(); if (f) f.remove(); zakres.createFilter(); } catch (e) { Logger.log("Filtr " + sh.getName() + ": " + e.message); }
 }
 
 /** Harmonogram (zbiorczy i miesięczne) - V5. */
@@ -5193,7 +5198,7 @@ function formatujArkuszHarmonogramu(sheet) {
 
   sheet.setFrozenColumns(4);
   [95, 55, 105, 210, 85, 260, 115, 115, 95, 55, 220].forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
-  sheet.getRange(1, 1, Math.max(lastRow, 2), 11).createFilter();
+  ustawFiltr_(sheet, sheet.getRange(1, 1, Math.max(lastRow, 2), 11));
   sheet.setTabColor(sheet.getName() === "2. Harmonogram" ? PALETA.harmonogram : "#93c5fd");
   sheet.getRange(1, 1).setNote(
     "LEGENDA:\n• Żółty wiersz = do zrobienia dziś\n• Czerwony status/data = po terminie\n• Szary wiersz = wykonany\n" +
@@ -5253,7 +5258,7 @@ function formatujArkuszUsterek(sheet) {
   );
   sheet.setConditionalFormatRules(reguly);
   sheet.setFrozenColumns(5);
-  sheet.getRange(1, 1, ostatni, KOL).createFilter();
+  ustawFiltr_(sheet, sheet.getRange(1, 1, ostatni, KOL));
   sheet.setTabColor(PALETA.usterki);
   sheet.getRange("B1").setNote("Czerwona data = usterka otwarta dłużej niż 7 dni. Czerwony wiersz = maszyna stoi.");
 }
@@ -5282,7 +5287,7 @@ function stylRejestru_() {
     SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("NOK").setBackground(PALETA.czerwonyTlo).setFontColor("#991b1b").setRanges([rI]).build(),
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($A2<>"",REGEXMATCH($B2&"","^PRZ-\\d{4}-\\d+$"))').setFontColor("#94a3b8").setItalic(true).setRanges([rCaly]).build()
   ]);
-  sh.getRange(1, 1, ostatni, KOL).createFilter();
+  ustawFiltr_(sh, sh.getRange(1, 1, ostatni, KOL));
   sh.getRange("B1").setNote("Szare, pochyłe wpisy = archiwalne (stare ID przeglądu, sprzed obecnego harmonogramu).");
 }
 
@@ -5293,8 +5298,16 @@ function porzadekZakladek_(ukryjTechniczne) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var aktywny = ss.getActiveSheet();
   var kod = pobierzKodAktualnegoMiesiaca();
-  var kolejnosc = [ARKUSZ_START, ARKUSZ_DZIS, nazwaArkuszaUsterek_(), "2. Harmonogram", "Harmonogram - " + kod,
-                   "3. Rejestr Przeglądów", "1. Urządzenia", ARKUSZ_TERMINY, "0. Dashboard CMMS", ARKUSZ_PRACOWNICY];
+  // kolejność = numery w nazwach zakładek (0, 1, 2, 3…), widoki na początku, miesiące harmonogramu za harmonogramem
+  var miesiace = ss.getSheets().map(function (sh) { return sh.getName(); })
+    .filter(function (n) { return n.indexOf("Harmonogram - ") === 0; })
+    .sort(function (a, b) {
+      var x = a.replace("Harmonogram - ", "").split("."), y = b.replace("Harmonogram - ", "").split(".");
+      return (x[1] + x[0]).localeCompare(y[1] + y[0]);
+    });
+  var kolejnosc = [ARKUSZ_START, ARKUSZ_DZIS, "0. Dashboard CMMS", "1. Urządzenia", "2. Harmonogram"]
+    .concat(miesiace)
+    .concat(["3. Rejestr Przeglądów", nazwaArkuszaUsterek_(), ARKUSZ_PRACOWNICY, ARKUSZ_TERMINY]);
   var poz = 1;
   kolejnosc.forEach(function (n) {
     var sh = ss.getSheetByName(n);
@@ -5339,4 +5352,44 @@ function ustawOchrone_() {
   if (urz) chron(urz.getRange(2, 1, urz.getMaxRows() - 1, 1), "ID urządzeń – zmiana rozłącza historię i kody QR");
   var ust = ss.getSheetByName(nazwaArkuszaUsterek_());
   if (ust) chron(ust.getRange(2, 1, ust.getMaxRows() - 1, 2), "ID i data zgłoszenia usterki");
+  var ter = ss.getSheetByName(ARKUSZ_TERMINY);
+  if (ter) chron(ter.getRange(2, 7, ter.getMaxRows() - 1, 3), "Następny termin, dni i status liczą się same – wpisz datę w „Ostatnie wykonanie”");
+}
+
+/**
+ * "7. Terminy UDT i kalibracje": kolumny G–I (Następny termin, Dni, Status) liczą formuły z G2/H2/I2.
+ * Ręczny wpis w kolumnie G kasuje formułę dla całej kolumny (#VALUE!). Tu formuły są przywracane,
+ * a ręcznie wpisany "następny termin" zamieniany na "ostatnie wykonanie" (termin minus okres), żeby nic nie zginęło.
+ */
+function naprawFormulyTerminow_(sh) {
+  if (sh.getLastRow() < 2) return;
+  var fG = '=ARRAYFORMULA(IF(A2:A="","",IF((E2:E="")+(F2:F=""),"",DATE(YEAR(E2:E),MONTH(E2:E)+F2:F,DAY(E2:E)))))';
+  var fH = '=ARRAYFORMULA(IF(G2:G="","",G2:G-TODAY()))';
+  var fI = '=ARRAYFORMULA(IF(A2:A="","",IF(E2:E="","UZUPEŁNIJ DATĘ",IF(F2:F="","UZUPEŁNIJ OKRES",IF(H2:H<0,"PO TERMINIE",IF(H2:H<=30,"WKRÓTCE","OK"))))))';
+  var formuly = sh.getRange("G2:I2").getFormulas()[0];
+  if (formuly[0] && formuly[1] && formuly[2]) return;   // wszystko w porządku
+
+  var n = sh.getLastRow() - 1;
+  var e = sh.getRange(2, 5, n, 1).getValues(), f = sh.getRange(2, 6, n, 1).getValues(), g = sh.getRange(2, 7, n, 1).getValues();
+  var przeniesione = 0;
+  for (var i = 0; i < n; i++) {
+    var termin = g[i][0];
+    if (!(termin instanceof Date)) {
+      var m = String(termin || "").match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/) || String(termin || "").match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      termin = m ? (m[1].length === 4 ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(+m[3], +m[2] - 1, +m[1])) : null;
+    }
+    var okres = parseInt(f[i][0], 10);
+    if (termin && !e[i][0] && okres > 0) {
+      e[i][0] = new Date(termin.getFullYear(), termin.getMonth() - okres, termin.getDate());
+      przeniesione++;
+    }
+  }
+  if (przeniesione) sh.getRange(2, 5, n, 1).setValues(e).setNumberFormat("dd.mm.yyyy");
+  sh.getRange("G2:I").clearContent();
+  sh.getRange("G2").setFormula(fG);
+  sh.getRange("H2").setFormula(fH);
+  sh.getRange("I2").setFormula(fI);
+  sh.getRange("G2:G").setNumberFormat("dd.mm.yyyy");
+  sh.getRange("H2:H").setNumberFormat("0");
+  if (przeniesione) sh.getRange("E1").setNote("Uzupełnione automatycznie (" + przeniesione + " poz.): ręcznie wpisany „Następny termin” zamieniono na „Ostatnie wykonanie” = termin minus okres. Sprawdź daty. Kolumny G–I liczą się same – nie wpisuj w nie.");
 }
