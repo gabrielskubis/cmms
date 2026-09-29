@@ -122,14 +122,15 @@ function rozpoznajLubDodajPracownika_(email) {
   if (sh.getLastRow() < 1) sh.getRange(1, 1, 1, 5).setValues([["Imię i nazwisko", "Aktywny", "Rola", "Uwagi", "Email"]]);
 
   // szybka ścieżka: ten sam mail rozpoznany niedawno (bez czytania arkusza i bez czekania na blokadę)
-  var kluczCache = "cmms_os_" + wersjaPracownikow_() + "_" + emailNorm;
-  try { var zc = cacheSkryptu_().get(kluczCache); if (zc) return JSON.parse(zc); } catch (eC) {}
+  var kluczCache = kluczOsoby_Cache_(emailNorm);
+  var zPamieci = osobaZPamieci_(emailNorm);
+  if (zPamieci) return zPamieci;
   var lock = LockService.getScriptLock();
   try { lock.waitLock(10000); } catch (e) { return wynik; }
   try {
     var r = rozpoznajPracownikaWArkuszu_(sh, emailNorm);
     SpreadsheetApp.flush();   // błędy zapisu (np. walidacja) wychodzą tutaj, a nie po wyświetleniu strony
-    try { cacheSkryptu_().put(kluczCache, JSON.stringify(r), 1800); } catch (eC2) {}
+    try { cacheSkryptu_().put(kluczCache, JSON.stringify(r), 21600); } catch (eC2) {}
     return r;
   } catch (eZapis) {
     Logger.log("Rozpoznanie pracownika " + emailNorm + ": " + eZapis.message);
@@ -137,6 +138,25 @@ function rozpoznajLubDodajPracownika_(email) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function kluczOsoby_Cache_(emailNorm) { return "cmms_os_" + wersjaPracownikow_() + "_" + emailNorm; }
+
+/** Pracownik z pamięci podręcznej (null, gdy nie ma) - bez czytania arkusza. */
+function osobaZPamieci_(email) {
+  var e = String(email || "").trim().toLowerCase();
+  if (!e) return null;
+  try { var z = cacheSkryptu_().get(kluczOsoby_Cache_(e)); return z ? JSON.parse(z) : null; } catch (err) { return null; }
+}
+
+/** Wywoływane z aplikacji PO wyświetleniu strony: rozpoznaje zalogowane konto (mail brany z sesji, nie od klienta). */
+function rozpoznajMnie() {
+  var email = "";
+  try { email = Session.getActiveUser().getEmail() || ""; } catch (e) {}
+  var r = email ? rozpoznajLubDodajPracownika_(email) : { nazwisko: "", status: "" };
+  r.email = email;
+  r.pracownicy = pobierzPracownikow();
+  return r;
 }
 
 function rozpoznajPracownikaWArkuszu_(sh, emailNorm) {
@@ -210,17 +230,20 @@ function szablonAplikacji_(param, _nieuzywany, zrodlo) {
     template.parametrQR = param;
     template.bladLadowania = "";
 
+    // Pracownik: tylko z pamięci (bez czytania arkusza i bez blokady) - strona pokazuje się od razu.
+    // Jeśli pamięć jest pusta, aplikacja dopyta o to w tle (rozpoznajMnie) już po wyświetleniu.
     var emailZalogowanego = "";
-    var osoba = { nazwisko: "", status: "" };
+    var osoba = null;
     try {
       emailZalogowanego = Session.getActiveUser().getEmail() || "";
-      if (emailZalogowanego) osoba = rozpoznajLubDodajPracownika_(emailZalogowanego);
+      if (emailZalogowanego) osoba = osobaZPamieci_(emailZalogowanego);
     } catch (eUser) {
-      Logger.log("Nie udało się rozpoznać zalogowanego pracownika: " + eUser.message);
+      Logger.log("Nie udało się odczytać zalogowanego pracownika: " + eUser.message);
     }
     template.zalogowanyEmail = emailZalogowanego;
-    template.zalogowanyNazwisko = osoba.nazwisko;
-    template.zalogowanyStatus = osoba.status;
+    template.zalogowanyNazwisko = osoba ? osoba.nazwisko : "";
+    template.zalogowanyStatus = osoba ? osoba.status : "";
+    template.rozpoznajPozniej = !!(emailZalogowanego && !osoba);
   } catch (err) {
     Logger.log("Błąd przygotowania aplikacji: " + err.message);
     template.pobranePrzeglady = [];
@@ -232,6 +255,7 @@ function szablonAplikacji_(param, _nieuzywany, zrodlo) {
     template.zalogowanyStatus = "";
     template.startMaszyny = null;
     template.pracownicy = null;
+    template.rozpoznajPozniej = false;
   }
   return template;
 }
@@ -284,6 +308,7 @@ function onOpen() {
       .addItem('➕ Wygeneruj nowy formularz', 'stworzFormularzGoogle'))
     .addSubMenu(ui.createMenu('🛠️ Serwis i naprawa danych')
       .addItem('🧪 Diagnostyka danych (raport)', 'diagnostykaDanychCMMS')
+      .addItem('⚡ Włącz szybkie otwieranie po skanie QR', 'instalujPodgrzewaniePamieci')
       .addItem('⚡ Wyczyść pamięć podręczną aplikacji', 'wyczyscPamiecAplikacji')
       .addSeparator()
       .addItem('🔧 Napraw format ID urządzeń (1.10 ≠ 1.1)', 'naprawFormatIdUrzadzen')
@@ -4714,7 +4739,7 @@ function wyczyscPamiecAplikacji() {
 function daneStartowe_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dzisStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
-  var d = zCache_("cmms_start", 900, function () { return liczDaneStartowe_(ss, dzisStr); });
+  var d = zCache_("cmms_start", 1500, function () { return liczDaneStartowe_(ss, dzisStr); });
   if (d && d.dzien !== dzisStr) {
     wyczyscCache_(["cmms_start"]);
     d = zCache_("cmms_start", 900, function () { return liczDaneStartowe_(ss, dzisStr); });
@@ -5410,4 +5435,26 @@ function naprawFormulyTerminow_(sh) {
   sh.getRange("G2:G").setNumberFormat("dd.mm.yyyy");
   sh.getRange("H2:H").setNumberFormat("0");
   if (przeniesione) sh.getRange("E1").setNote("Uzupełnione automatycznie (" + przeniesione + " poz.): ręcznie wpisany „Następny termin” zamieniono na „Ostatnie wykonanie” = termin minus okres. Sprawdź daty. Kolumny G–I liczą się same – nie wpisuj w nie.");
+}
+
+/* ==========================================================================
+ *  SZYBKIE OTWIERANIE PO SKANIE QR - pamięć podgrzewana w tle
+ *  Wyzwalacz co 5 minut liczy dane startowe, zanim ktoś zeskanuje kod - po zapisie
+ *  przeglądu (który czyści pamięć) albo po przerwie pierwszy technik nie czeka na odczyt arkusza.
+ * ========================================================================== */
+function podgrzejPamiec() {
+  try { daneStartowe_(); } catch (e) { Logger.log("podgrzej start: " + e.message); }
+  try { pobierzMapeUrzadzen_(); } catch (e) { Logger.log("podgrzej mapa: " + e.message); }
+  try { pobierzPracownikow(); } catch (e) { Logger.log("podgrzej prac.: " + e.message); }
+  try { pobierzStatystykiPrzegladow(); } catch (e) { Logger.log("podgrzej stat.: " + e.message); }
+}
+
+function instalujPodgrzewaniePamieci() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === "podgrzejPamiec") ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("podgrzejPamiec").timeBased().everyMinutes(5).create();
+  podgrzejPamiec();
+  SpreadsheetApp.getUi().alert("⚡ Szybkie otwieranie włączone\n\nDane aplikacji są odświeżane w tle co 5 minut, " +
+    "więc po skanie kodu QR strona nie czeka na odczyt arkusza.\n\nWyłączenie: Rozszerzenia → Apps Script → Wyzwalacze → podgrzejPamiec → usuń.");
 }

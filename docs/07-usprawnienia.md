@@ -100,6 +100,11 @@ Zmienia tylko wygląd, układ i widoki — dane, nazwy zakładek i kolumny, z kt
 - ~~Okno w arkuszu = aplikacja~~ — **wycofane na prośbę użytkownika**: „📝 Rozlicz przegląd w arkuszu” znów otwiera klasyczne, szybkie okno (`FormularzPrzegladu.html`). Pełną aplikację otwiera „🖥️ Otwórz aplikację przeglądów”.
 - Zgłoszenie problemu z przeglądu ma pole **„Czy maszyna stoi?”** (TAK → priorytet Wysoki, mail „⛔ MASZYNA STOI”); w „4. Usterki i Awarie” zapisuje się **Źródło** („Przegląd (telefon)” / „Przegląd (arkusz)”) i **Maszyna stoi** — czas przestoju policzy się przy zamknięciu.
 
+## 1g. Szybsze otwieranie po skanie QR
+
+- Strona pokazuje się bez czekania na rozpoznanie pracownika: w chwili otwarcia brany jest tylko wynik z pamięci; gdy go nie ma, aplikacja dopytuje w tle (`rozpoznajMnie`) i sama uzupełnia nazwisko i wykonawcę. Wcześniej pierwsze wejście konta mogło czekać na odczyt arkusza i blokadę (do 10 s).
+- Menu „Serwis → ⚡ Włącz szybkie otwieranie po skanie QR” instaluje wyzwalacz `podgrzejPamiec` (co 5 min): dane startowe, karta urządzeń, pracownicy i statystyki są przeliczane w tle, więc po zapisie przeglądu albo po przerwie pierwszy skan nie czeka na odczyt harmonogramu.
+
 ## 2. Propozycje kolejnych usprawnień
 
 Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do którego celu SMART się przyczynia.

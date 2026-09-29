@@ -660,6 +660,7 @@
   var ZALOGOWANY_NAZWISKO = <?!= JSON.stringify(zalogowanyNazwisko || '').replace(/</g, '\\u003c') ?>;
   var ZALOGOWANY_EMAIL = <?!= JSON.stringify(zalogowanyEmail || '').replace(/</g, '\\u003c') ?>;
   var ZALOGOWANY_STATUS = <?!= JSON.stringify(zalogowanyStatus || '').replace(/</g, '\\u003c') ?>;   // ok | oczekuje | nieaktywny | ''
+  var ROZPOZNAJ_POZNIEJ = <?!= (typeof rozpoznajPozniej !== 'undefined' && rozpoznajPozniej) ? 'true' : 'false' ?>;
   var WYBRANE = <?!= JSON.stringify(wybraneId || '').replace(/</g, '\\u003c') ?>;
   var PARAM_QR = <?!= JSON.stringify(parametrQR || '').replace(/</g, '\\u003c') ?>;
   var BLAD = <?!= JSON.stringify(bladLadowania || '').replace(/</g, '\\u003c') ?>;
@@ -866,14 +867,21 @@
     ustawMotyw(odczytaj('cmms_motyw'));
     var d = new Date();
     var DNI = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
-    $('podtytul').textContent = DNI[d.getDay()] + ', ' + ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear() +
-      (ZALOGOWANY_NAZWISKO && ZALOGOWANY_STATUS !== 'nieaktywny' ? ' · 👤 ' + ZALOGOWANY_NAZWISKO : '');
-    if (ZALOGOWANY_STATUS === 'oczekuje') {
-      komunikat('👤 Konto ' + ZALOGOWANY_EMAIL + ' nie jest jeszcze na liście pracowników – kierownik musi je zatwierdzić w arkuszu „6. Pracownicy”. Do tego czasu możesz rozliczać jako ' + ZALOGOWANY_NAZWISKO + '.', 'k-info');
-    } else if (ZALOGOWANY_STATUS === 'nieaktywny') {
-      komunikat('👤 Konto ' + ZALOGOWANY_EMAIL + ' jest oznaczone w arkuszu „6. Pracownicy” jako nieaktywne – wybierz wykonawcę ręcznie.', 'k-info');
+    DATA_TXT = DNI[d.getDay()] + ', ' + ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
+    pokazZalogowanego();
+    if (ROZPOZNAJ_POZNIEJ) {
+      // strona już widoczna – kim jest zalogowany, sprawdzamy w tle
+      RUN.withSuccessHandler(function (r) {
+        if (!r) return;
+        ZALOGOWANY_NAZWISKO = r.nazwisko || ''; ZALOGOWANY_STATUS = r.status || ''; ZALOGOWANY_EMAIL = r.email || ZALOGOWANY_EMAIL;
+        pokazZalogowanego();
+        var wybrany = String(($('wykonawca') || {}).value || '').trim();
+        if (r.pracownicy) ustawPracownikow(r.pracownicy);
+        if (wybrany && $('wykonawca') && !$('wykonawca').value) $('wykonawca').value = wybrany;
+        informujOKoncie();
+      }).withFailureHandler(function () {}).rozpoznajMnie();
     }
-
+    informujOKoncie();
     if (PRACOWNICY_START) ustawPracownikow(PRACOWNICY_START);   // lista przyszła razem ze stroną – bez dodatkowego zapytania
     else RUN.withSuccessHandler(ustawPracownikow).withFailureHandler(function () { ustawPracownikow([]); }).pobierzPracownikow();
 
@@ -1002,6 +1010,17 @@
     render();
     ustawWidok();
     krok(true);
+  }
+  var DATA_TXT = '';
+  function pokazZalogowanego() {
+    $('podtytul').textContent = DATA_TXT + (ZALOGOWANY_NAZWISKO && ZALOGOWANY_STATUS !== 'nieaktywny' ? ' · 👤 ' + ZALOGOWANY_NAZWISKO : '');
+  }
+  function informujOKoncie() {
+    if (ZALOGOWANY_STATUS === 'oczekuje') {
+      komunikat('👤 Konto ' + ZALOGOWANY_EMAIL + ' nie jest jeszcze na liście pracowników – kierownik musi je zatwierdzić w arkuszu „6. Pracownicy”. Do tego czasu możesz rozliczać jako ' + ZALOGOWANY_NAZWISKO + '.', 'k-info');
+    } else if (ZALOGOWANY_STATUS === 'nieaktywny') {
+      komunikat('👤 Konto ' + ZALOGOWANY_EMAIL + ' jest oznaczone w arkuszu „6. Pracownicy” jako nieaktywne – wybierz wykonawcę ręcznie.', 'k-info');
+    }
   }
 
   function wlaczPrzyciskiPrio(id, fn) {
