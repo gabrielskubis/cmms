@@ -7,56 +7,125 @@
   <title>CMMS – Panel Zarządu</title>
   <style>
     :root {
-      --navy: #0f172a; --muted: #64748b; --border: #e2e8f0; --bg: #f8fafc;
-      --ok: #059669; --okbg: #ecfdf5; --warn: #b45309; --warnbg: #fffbeb;
-      --danger: #dc2626; --dangerbg: #fef2f2; --accent: #1e40af;
+      --bg: #f1f5f9; --panel: #ffffff; --panel-2: #f8fafc; --border: #e2e8f0; --border-2: #cbd5e1;
+      --text: #0f172a; --muted: #64748b; --accent: #2563eb; --accent-tlo: #eff6ff; --accent-tekst: #1d4ed8;
+      --ok: #059669; --ok-tlo: #ecfdf5; --warn: #b45309; --warn-tlo: #fffbeb; --danger: #dc2626; --danger-tlo: #fef2f2;
+      --cien: 0 1px 2px rgba(15, 23, 42, .06), 0 1px 3px rgba(15, 23, 42, .08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1120; --panel: #111a2e; --panel-2: #0f172a; --border: #1f2a44; --border-2: #334155;
+        --text: #f1f5f9; --muted: #94a3b8; --accent: #3b82f6; --accent-tlo: rgba(59, 130, 246, .16); --accent-tekst: #93c5fd;
+        --ok: #10b981; --ok-tlo: rgba(16, 185, 129, .14); --warn: #f59e0b; --warn-tlo: rgba(245, 158, 11, .14);
+        --danger: #f87171; --danger-tlo: rgba(239, 68, 68, .14); --cien: 0 1px 2px rgba(0, 0, 0, .4);
+        color-scheme: dark;
+      }
     }
     * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-           background: var(--bg); color: var(--navy); margin: 0; padding: 20px 16px 40px; }
-    .wrap { max-width: 920px; margin: 0 auto; }
-    header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-    header h1 { font-size: 1.4rem; margin: 0; }
-    header .sub { font-size: .85rem; color: var(--muted); }
-    .odswiez { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px;
-               font-size: .8rem; color: var(--accent); font-weight: 600; cursor: pointer; }
+           background: var(--bg); color: var(--text); margin: 0; }
+    button { font-family: inherit; cursor: pointer; }
+    [hidden] { display: none !important; }
+    .wrap { max-width: 1500px; margin: 0 auto; padding: 16px 16px 40px; }
 
-    .kafelki { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
-    @media (max-width: 720px) { .kafelki { grid-template-columns: repeat(2, 1fr); } }
-    .kaf { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-    .kaf .etyk { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
-    .kaf .wart { font-size: 1.9rem; font-weight: 800; line-height: 1; }
-    .kaf .trend { font-size: .78rem; font-weight: 600; margin-top: 6px; }
-    .kaf.dobre .wart { color: var(--ok); }
-    .kaf.uwaga .wart { color: var(--warn); }
-    .kaf.zle .wart { color: var(--danger); }
-    .kaf .brak { color: var(--muted); font-size: .82rem; font-weight: 500; margin-top: 4px; }
+    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    header h1 { font-size: 1.35rem; margin: 0; }
+    header .sub { font-size: .85rem; color: var(--muted); margin-top: 2px; }
+    .odswiez { background: var(--panel); border: 1px solid var(--border-2); border-radius: 9px; padding: 8px 14px;
+               font-size: .85rem; color: var(--accent-tekst); font-weight: 700; }
 
-    .karta { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
-    .karta h2 { font-size: .95rem; font-weight: 700; margin: 0 0 14px; }
-    .pusto { color: var(--muted); font-size: .85rem; font-style: italic; }
+    .zakladki { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; overflow-x: auto; scrollbar-width: none; }
+    .zakladka { background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -1px; padding: 10px 14px 12px;
+                font-size: .98rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .zakladka.active { color: var(--text); border-bottom-color: var(--accent); }
+    .zakladka .lb { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--danger); color: #fff; font-size: .75rem; }
 
-    .wykresy { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 720px) { .wykresy { grid-template-columns: 1fr; } }
-    .bary { display: flex; align-items: flex-end; gap: 14px; height: 120px; padding-top: 8px; }
+    .kafelki { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    @media (max-width: 1100px) { .kafelki { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 640px) { .kafelki { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .kaf { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--cien); text-align: left; color: var(--text); }
+    button.kaf:hover { border-color: var(--accent); }
+    .kaf .etyk { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
+    .kaf .wart { font-size: 1.8rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .kaf .trend { font-size: .78rem; font-weight: 600; margin-top: 6px; color: var(--muted); }
+    .kaf.dobre .wart { color: var(--ok); } .kaf.uwaga .wart { color: var(--warn); } .kaf.zle .wart { color: var(--danger); }
+    .kaf .brak { color: var(--muted); font-size: .82rem; margin-top: 4px; }
+
+    .siatka { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .siatka { grid-template-columns: minmax(0, 1fr); } }
+    .karta { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; box-shadow: var(--cien); margin-bottom: 16px; min-width: 0; }
+    .karta h2 { font-size: .95rem; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .karta h2 small { font-weight: 500; color: var(--muted); font-size: .78rem; }
+    .pusto { color: var(--muted); font-size: .88rem; padding: 10px 0; }
+
+    .bary { display: flex; align-items: flex-end; gap: 14px; height: 130px; padding-top: 18px; }
     .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
-    .bar { width: 100%; max-width: 46px; border-radius: 6px 6px 0 0; background: var(--accent); position: relative; }
-    .bar .val { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-size: .75rem; font-weight: 700; color: var(--navy); }
-    .bar-lbl { font-size: .72rem; color: var(--muted); margin-top: 6px; text-align: center; }
+    .bar { width: 100%; max-width: 48px; border-radius: 6px 6px 0 0; background: var(--accent); position: relative; }
+    .bar .val { position: absolute; top: -19px; left: -10px; right: -10px; text-align: center; font-size: .75rem; font-weight: 700; }
+    .bar-lbl { font-size: .74rem; color: var(--muted); margin-top: 6px; text-align: center; }
+    .podtytul { font-size: .8rem; font-weight: 700; margin-bottom: 4px; }
 
-    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-    th { text-align: left; padding: 6px 8px; color: var(--muted); font-size: .72rem; text-transform: uppercase;
-         letter-spacing: .03em; border-bottom: 2px solid var(--border); }
-    td { padding: 9px 8px; border-bottom: 1px solid var(--border); }
+    .tabela { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th { text-align: left; padding: 7px 8px; color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .03em;
+         border-bottom: 2px solid var(--border); white-space: nowrap; }
+    td { padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
     tr:last-child td { border-bottom: none; }
-    .id { color: var(--muted); font-size: .78rem; }
-    .badge { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
-    .badge.zle { background: var(--dangerbg); color: var(--danger); }
-    .badge.uwaga { background: var(--warnbg); color: var(--warn); }
+    tr.klik { cursor: pointer; }
+    tr.klik:hover td { background: var(--panel-2); }
+    .id { color: var(--muted); font-size: .78rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .badge { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+    .b-zle { background: var(--danger-tlo); color: var(--danger); }
+    .b-uwaga { background: var(--warn-tlo); color: var(--warn); }
+    .b-ok { background: var(--ok-tlo); color: var(--ok); }
+    .b-szary { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
+    .b-stoi { background: var(--danger); color: #fff; }
+    .pasek { height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; min-width: 80px; }
+    .pasek i { display: block; height: 100%; border-radius: 999px; }
+    .kropka { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+
+    .filtry { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+    .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); }
+    .seg button { border: none; background: none; color: var(--muted); padding: 7px 12px; border-radius: 7px; font-weight: 700; font-size: .85rem; }
+    .seg button.active { background: var(--accent); color: #fff; }
+    select, input[type=search] { padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border-2); background: var(--panel);
+                                 color: var(--text); font-size: .9rem; font-family: inherit; }
+    input[type=search] { min-width: 220px; flex: 1; }
+
+    .historia-uklad { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .historia-uklad { grid-template-columns: minmax(0, 1fr); } }
+    .lista-maszyn { max-height: calc(100vh - 220px); overflow-y: auto; margin: 0 -6px; padding: 0 6px; }
+    @media (max-width: 900px) { .lista-maszyn { max-height: 320px; } }
+    .grupa { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 10px 4px 4px; }
+    .maszyna-poz { display: flex; width: 100%; gap: 8px; align-items: center; text-align: left; border: none; background: none; color: var(--text);
+                   padding: 8px; border-radius: 8px; font-size: .9rem; }
+    .maszyna-poz:hover { background: var(--panel-2); }
+    .maszyna-poz.active { background: var(--accent); color: #fff; }
+    .maszyna-poz.active .id { color: rgba(255, 255, 255, .8); }
+    .maszyna-poz .nazwa { flex: 1; min-width: 0; }
+    .maszyna-poz .lb { background: var(--danger); color: #fff; border-radius: 999px; padding: 0 7px; font-size: .72rem; font-weight: 700; }
+    .karta-maszyny h3 { margin: 0; font-size: 1.3rem; }
+    .karta-maszyny .meta { color: var(--muted); font-size: .85rem; margin: 4px 0 14px; }
+    .mini { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+    @media (max-width: 640px) { .mini { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .mini div { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .mini small { display: block; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    .mini b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    .mini span { display: block; font-size: .75rem; color: var(--muted); margin-top: 2px; }
+    .os { list-style: none; margin: 0; padding: 0 0 0 18px; position: relative; }
+    .os::before { content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
+    .os li { position: relative; padding: 0 0 14px; font-size: .88rem; line-height: 1.4; }
+    .os li::before { content: ''; position: absolute; left: -17px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); border: 2px solid var(--panel); }
+    .os li.zle::before { background: var(--danger); }
+    .os li.ust::before { border-radius: 2px; }
+    .os .kiedy { color: var(--muted); font-size: .78rem; }
+    .os .op { color: var(--muted); font-size: .85rem; }
+    .filtr-hist { margin-bottom: 12px; }
 
     footer { text-align: center; font-size: .75rem; color: var(--muted); margin-top: 24px; }
-    .demo { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; border-radius: 10px; padding: 10px 16px; font-size: .85rem; margin-bottom: 16px; }
-    .blad { background: var(--dangerbg); border: 1px solid #fca5a5; color: var(--danger); border-radius: 10px; padding: 16px 20px; font-size: .9rem; }
+    .demo { background: var(--warn-tlo); border: 1px solid var(--warn); color: var(--warn); border-radius: 10px; padding: 10px 16px; font-size: .85rem; margin-bottom: 16px; }
+    .blad { background: var(--danger-tlo); border: 1px solid var(--danger); color: var(--danger); border-radius: 10px; padding: 16px 20px; font-size: .9rem; }
   </style>
 </head>
 <body>
@@ -66,12 +135,47 @@
       <h1>📊 Panel Zarządu — CMMS Kraków / Nowa Huta</h1>
       <div class="sub" id="stanNa"></div>
     </div>
-    <button class="odswiez" onclick="location.reload()">↻ Odśwież</button>
+    <button class="odswiez" onclick="location.reload()">↻ Odśwież dane</button>
   </header>
 
-  <div id="demo" class="demo" style="display:none;">🧪 <b>Widok przykładowy</b> — dane symulowane. Tak panel będzie wyglądał po kilku miesiącach używania systemu.</div>
-  <div id="blad" class="blad" style="display:none;"></div>
-  <div id="tresc"></div>
+  <div id="demo" class="demo" hidden>🧪 <b>Widok przykładowy</b> — dane symulowane. Tak panel będzie wyglądał po kilku miesiącach używania systemu.</div>
+  <div id="blad" class="blad" hidden></div>
+
+  <nav class="zakladki" id="zakladki" hidden>
+    <button class="zakladka active" data-w="przeglad">📈 Przegląd</button>
+    <button class="zakladka" data-w="usterki">🔧 Aktualne usterki<span class="lb" id="lbUsterki"></span></button>
+    <button class="zakladka" data-w="historia">🕘 Historia maszyn</button>
+  </nav>
+
+  <section id="w-przeglad"></section>
+
+  <section id="w-usterki" hidden>
+    <div class="karta">
+      <div class="filtry">
+        <div class="seg" id="fStatus">
+          <button class="active" data-v="">Wszystkie</button><button data-v="Zgłoszona">Zgłoszone</button><button data-v="W trakcie">W trakcie</button><button data-v="stoi">⛔ Stoi</button>
+        </div>
+        <div class="seg" id="fPrio">
+          <button class="active" data-v="">Każdy priorytet</button><button data-v="Wysoki">Wysoki</button><button data-v="Średni">Średni</button><button data-v="Niski">Niski</button>
+        </div>
+        <select id="fObszar"><option value="">Wszystkie obszary</option></select>
+        <input type="search" id="fSzukaj" placeholder="Szukaj maszyny, opisu, osoby…">
+      </div>
+      <div class="tabela" id="tabelaUsterek"></div>
+    </div>
+  </section>
+
+  <section id="w-historia" hidden>
+    <div class="historia-uklad">
+      <div class="karta" style="margin-bottom:0;">
+        <input type="search" id="szukajMaszyny" placeholder="Szukaj maszyny lub ID…" style="width:100%;margin-bottom:6px;">
+        <div class="lista-maszyn" id="listaMaszyn"></div>
+      </div>
+      <div class="karta karta-maszyny" id="kartaMaszyny">
+        <div class="pusto">Wybierz maszynę z listy, żeby zobaczyć jej statystyki, otwarte usterki i pełną historię przeglądów i awarii.</div>
+      </div>
+    </div>
+  </section>
 
   <footer>Dane liczone na żywo z arkusza CMMS przy każdym otwarciu strony. Widok tylko do odczytu.</footer>
 </div>
@@ -81,102 +185,253 @@
   var BLAD = <?!= JSON.stringify(blad || '').replace(/</g, '\\u003c') ?>;
   var DEMO = <?!= demo ? 'true' : 'false' ?>;
 
+  var KOLORY = { 'Suche Mieszanki': '#3b82f6', 'Suszarnia Piachu': '#f59e0b', 'MIXER HRB': '#8b5cf6',
+                 'Kompresory': '#10b981', 'Sprężone Powietrze': '#06b6d4', 'Rozdzielnie El.': '#ef4444' };
+  var fUst = { status: '', prio: '', obszar: '', q: '' };
+  var wybranaMaszyna = '';
+  var HIST = null, filtrHist = '';
+
+  function $(id) { return document.getElementById(id); }
   function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function fmtData(s) { return String(s || '').substring(0, 10); }
+  function norm(s) { return String(s || '').toLowerCase(); }
+  function kolor(o) { return KOLORY[o] || '#64748b'; }
+  function fmtData(s) { return String(s || '').substring(0, 16); }
+  function dniTxt(d) { return d == null ? '—' : (d === 0 ? 'dziś' : d + ' d'); }
 
+  // ---------- ZAKŁADKI ----------
+  function ustawWidok(w, bezHash) {
+    document.querySelectorAll('.zakladka').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-w') === w); });
+    ['przeglad', 'usterki', 'historia'].forEach(function (k) { $('w-' + k).hidden = k !== w; });
+    if (!bezHash) try { history.replaceState(null, '', '#' + w + (w === 'historia' && wybranaMaszyna ? '=' + encodeURIComponent(wybranaMaszyna) : '')); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- PRZEGLĄD ----------
   function kafelekRealizacja(d) {
     var klasa = d.realizacja >= 80 ? 'dobre' : (d.realizacja >= 50 ? 'uwaga' : 'zle');
     var trend = '';
-    if (d.realizacjaTrend !== null) {
-      var strzalka = d.realizacjaTrend >= 0 ? '▲' : '▼';
-      var kolor = d.realizacjaTrend >= 0 ? 'var(--ok)' : 'var(--danger)';
-      trend = '<div class="trend" style="color:' + kolor + '">' + strzalka + ' ' +
-        Math.abs(d.realizacjaTrend).toFixed(1) + ' pkt vs poprzedni miesiąc</div>';
+    if (d.realizacjaTrend !== null && d.realizacjaTrend !== undefined) {
+      trend = '<div class="trend" style="color:' + (d.realizacjaTrend >= 0 ? 'var(--ok)' : 'var(--danger)') + '">' +
+        (d.realizacjaTrend >= 0 ? '▲' : '▼') + ' ' + Math.abs(d.realizacjaTrend).toFixed(1) + ' pkt vs poprzedni miesiąc</div>';
     }
     return '<div class="kaf ' + klasa + '"><div class="etyk">Realizacja planu przeglądów</div>' +
       '<div class="wart">' + d.realizacja.toFixed(1) + '%</div>' + trend + '</div>';
   }
-
-  function kafelekProste(etyk, wartosc, dobreGdyZero) {
-    var klasa = wartosc === 0 ? (dobreGdyZero ? 'dobre' : 'dobre') : (wartosc <= 2 ? 'uwaga' : 'zle');
-    return '<div class="kaf ' + klasa + '"><div class="etyk">' + etyk + '</div><div class="wart">' + wartosc + '</div></div>';
+  function kafelek(etyk, wartosc, klasa, dopisek, akcja) {
+    var tag = akcja ? 'button' : 'div';
+    return '<' + tag + ' class="kaf ' + klasa + '"' + (akcja ? ' data-akcja="' + akcja + '"' : '') + '><div class="etyk">' + etyk + '</div>' +
+      '<div class="wart">' + wartosc + '</div>' + (dopisek ? '<div class="trend">' + dopisek + '</div>' : '') + '</' + tag + '>';
   }
-
+  function klasaIlosci(n) { return n === 0 ? 'dobre' : (n <= 2 ? 'uwaga' : 'zle'); }
   function kafelekUDT(d) {
-    if (!d.udtDostepne) {
-      return '<div class="kaf"><div class="etyk">Terminy UDT / kalibracji</div><div class="brak">Arkusz terminów nieuzupełniony</div></div>';
-    }
-    var klasa = d.udtProblem === 0 ? 'dobre' : (d.udtPoTerminie > 0 ? 'zle' : 'uwaga');
-    return '<div class="kaf ' + klasa + '"><div class="etyk">Terminy UDT / kalibracji</div>' +
-      '<div class="wart">' + d.udtProblem + '</div>' +
-      (d.udtPoTerminie > 0 ? '<div class="trend" style="color:var(--danger)">w tym ' + d.udtPoTerminie + ' po terminie</div>' : '') +
-      '</div>';
+    if (!d.udtDostepne) return '<div class="kaf"><div class="etyk">Terminy UDT / kalibracji</div><div class="brak">Arkusz terminów nieuzupełniony</div></div>';
+    return kafelek('Terminy UDT / kalibracji', d.udtProblem, d.udtProblem === 0 ? 'dobre' : (d.udtPoTerminie > 0 ? 'zle' : 'uwaga'),
+      d.udtPoTerminie > 0 ? '<span style="color:var(--danger)">w tym ' + d.udtPoTerminie + ' po terminie</span>' : 'po terminie lub wkrótce');
   }
-
-  function wykresBar(lista, klucz, jednostka, format) {
-    if (!lista.length) return '<div class="pusto">Za mało danych do pokazania trendu.</div>';
+  function wykresBar(lista, klucz, format) {
+    if (!lista || !lista.length) return '<div class="pusto">Za mało danych do pokazania trendu.</div>';
     var max = Math.max.apply(null, lista.map(function (x) { return x[klucz]; }).concat([1]));
     return '<div class="bary">' + lista.map(function (x) {
-      var h = Math.max(6, Math.round(x[klucz] / max * 90));
-      return '<div class="bar-col"><div class="bar" style="height:' + h + 'px;">' +
-        '<div class="val">' + format(x[klucz]) + '</div></div>' +
+      var h = Math.max(6, Math.round(x[klucz] / max * 100));
+      return '<div class="bar-col"><div class="bar" style="height:' + h + 'px;"><div class="val">' + format(x[klucz]) + '</div></div>' +
         '<div class="bar-lbl">' + esc(x.miesiac || x.label) + '</div></div>';
     }).join('') + '</div>';
   }
-
+  function tabelaObszarow(lista) {
+    if (!lista || !lista.length) return '<div class="pusto">Brak zaplanowanych przeglądów w ostatnich 30 dniach.</div>';
+    return '<div class="tabela"><table><tr><th>Obszar</th><th style="width:40%;">Realizacja</th><th class="num">Wykonane / plan</th><th class="num">Zaległe</th><th class="num">NOK</th></tr>' +
+      lista.map(function (o) {
+        var k = o.pct >= 80 ? 'var(--ok)' : (o.pct >= 50 ? 'var(--warn)' : 'var(--danger)');
+        return '<tr><td><span class="kropka" style="background:' + kolor(o.obszar) + '"></span>' + esc(o.obszar) + '</td>' +
+          '<td><div style="display:flex;align-items:center;gap:8px;"><div class="pasek" style="flex:1;"><i style="width:' + Math.min(100, o.pct) + '%;background:' + k + '"></i></div>' +
+          '<b class="num" style="min-width:48px;">' + o.pct.toFixed(0) + '%</b></div></td>' +
+          '<td class="num">' + o.wykonane + ' / ' + o.plan + '</td>' +
+          '<td class="num">' + (o.zalegle ? '<span class="badge b-zle">' + o.zalegle + '</span>' : '0') + '</td>' +
+          '<td class="num">' + (o.nok || 0) + '</td></tr>';
+      }).join('') + '</table></div>';
+  }
   function tabelaTop(lista) {
-    if (!lista.length) return '<div class="pusto">Brak zgłoszonych usterek — dobra wiadomość.</div>';
-    return '<table><tr><th>Maszyna</th><th style="text-align:right;">Usterki (otwarte + zamknięte)</th></tr>' +
+    if (!lista || !lista.length) return '<div class="pusto">Brak otwartych usterek — dobra wiadomość.</div>';
+    return '<table><tr><th>Maszyna</th><th class="num">Otwarte usterki</th></tr>' +
       lista.map(function (m) {
-        return '<tr><td>' + esc(m.nazwa || m.id) + ' <span class="id">' + esc(m.id) + '</span></td>' +
-          '<td style="text-align:right;font-weight:700;">' + m.liczba + '</td></tr>';
+        return '<tr class="klik" data-maszyna="' + esc(m.id) + '"><td>' + esc(m.nazwa || m.id) + ' <span class="id">' + esc(m.id) + '</span></td>' +
+          '<td class="num"><b>' + m.liczba + '</b></td></tr>';
       }).join('') + '</table>';
   }
+  function renderPrzeglad() {
+    var d = DANE;
+    var html = '<div class="kafelki">' +
+      kafelekRealizacja(d) +
+      kafelek('Otwarte usterki — priorytet Wysoki', d.otwarteWysokieLiczba, klasaIlosci(d.otwarteWysokieLiczba), 'pokaż listę →', 'usterki-wysokie') +
+      kafelek('Maszyny aktualnie stojące', d.maszynyStojace, d.maszynyStojace ? 'zle' : 'dobre', d.maszynyStojace ? 'pokaż →' : '', d.maszynyStojace ? 'usterki-stoi' : '') +
+      kafelek('Przestoje — ostatnie 30 dni', String(d.przestojH30 || 0).replace('.', ',') + ' h', (d.przestojH30 || 0) === 0 ? 'dobre' : ((d.przestojH30 || 0) <= 8 ? 'uwaga' : 'zle'), 'suma czasu z zamkniętych awarii') +
+      kafelekUDT(d) + '</div>';
+    html += '<div class="siatka">' +
+      '<div class="karta"><h2>Realizacja wg obszaru <small>ostatnie 30 dni</small></h2>' + tabelaObszarow(d.realizacjaObszary) + '</div>' +
+      '<div class="karta"><h2>Trend — ostatnie miesiące</h2><div class="siatka" style="gap:10px;">' +
+        '<div><div class="podtytul">Realizacja planu (%)</div>' + wykresBar(d.trendRealizacji, 'pct', function (v) { return v.toFixed(0) + '%'; }) + '</div>' +
+        '<div><div class="podtytul">Zgłoszone usterki (szt.)</div>' + wykresBar(d.trendUsterek, 'liczba', function (v) { return v; }) + '</div>' +
+      '</div></div>' +
+      '<div class="karta"><h2>Najbardziej awaryjne maszyny <small>kliknij, żeby zobaczyć historię</small></h2>' + tabelaTop(d.topMaszyny) + '</div>' +
+      '<div class="karta"><h2>Najpilniejsze usterki <small><a href="#" data-akcja="usterki" style="color:var(--accent-tekst);">wszystkie →</a></small></h2>' +
+        tabelaUsterek((d.aktualneUsterki || []).slice(0, 6), true) + '</div>' +
+      '</div>';
+    $('w-przeglad').innerHTML = html;
+  }
 
-  function tabelaWysokie(lista) {
-    if (!lista.length) return '<div class="pusto">Brak otwartych usterek z priorytetem Wysoki — dobra wiadomość.</div>';
-    return '<table><tr><th>Maszyna</th><th>Opis</th><th>Zgłoszono</th><th style="text-align:right;">Czeka</th></tr>' +
+  // ---------- AKTUALNE USTERKI ----------
+  function tabelaUsterek(lista, kompakt) {
+    if (!lista.length) return '<div class="pusto">✅ Brak otwartych usterek dla wybranych filtrów.</div>';
+    return '<table><tr><th>Maszyna</th><th>Opis</th>' + (kompakt ? '' : '<th>Priorytet</th><th>Status</th><th>Zgłosił</th><th>Zgłoszono</th>') +
+      '<th class="num">Czeka</th></tr>' +
       lista.map(function (u) {
-        var dni = u.dni == null ? '—' : u.dni + ' d';
-        var badge = (u.dni || 0) > 7 ? 'zle' : 'uwaga';
-        return '<tr><td>' + esc(u.nazwa || u.id) + ' <span class="id">' + esc(u.id) + '</span></td>' +
-          '<td>' + esc(u.opis) + '</td><td class="id">' + fmtData(u.data) + '</td>' +
-          '<td style="text-align:right;"><span class="badge ' + badge + '">' + dni + '</span></td></tr>';
+        var wT = u.status === 'W trakcie';
+        var status = (u.stoi ? '<span class="badge b-stoi">⛔ STOI</span> ' : '') +
+          (wT ? '<span class="badge b-uwaga">🔧 W trakcie</span>' + (u.osoba ? '<div class="id" style="margin-top:3px;">' + esc(u.osoba) + '</div>' : '') : '<span class="badge b-zle">Zgłoszona</span>');
+        var znana = u.znanaMaszyna !== false;
+        return '<tr' + (znana ? ' class="klik" data-maszyna="' + esc(u.idUrzadzenia) + '"' : ' title="ID maszyny w starym formacie – popraw w arkuszu (menu: Serwis → Napraw ID urządzeń w Usterkach)"') + '>' +
+          '<td style="min-width:170px;"><span class="kropka" style="background:' + kolor(u.obszar) + '"></span><b>' + esc(u.nazwa) + '</b>' +
+            '<div class="id">' + esc(u.idUrzadzenia) + ' · ' + esc(u.obszar) + (znana ? '' : ' · <span class="badge b-uwaga">' + (u.staryUklad ? 'stary wpis' : 'stare ID') + '</span>') + '</div></td>' +
+          '<td>' + esc(u.opis) + (kompakt ? '<div style="margin-top:4px;">' + status + ' <span class="badge ' + (u.priorytet === 'Wysoki' ? 'b-zle' : 'b-szary') + '">' + esc(u.priorytet) + '</span></div>' : '') + '</td>' +
+          (kompakt ? '' :
+            '<td><span class="badge ' + (u.priorytet === 'Wysoki' ? 'b-zle' : (u.priorytet === 'Średni' ? 'b-uwaga' : 'b-szary')) + '">' + esc(u.priorytet) + '</span></td>' +
+            '<td>' + status + '</td><td>' + esc(u.zglaszajacy) + '</td><td class="id">' + fmtData(u.data) + '</td>') +
+          '<td class="num"><span class="badge ' + ((u.dni || 0) > 7 ? 'b-zle' : 'b-szary') + '">' + dniTxt(u.dni) + '</span></td></tr>';
       }).join('') + '</table>';
   }
+  function renderUsterki() {
+    var lista = (DANE.aktualneUsterki || []).filter(function (u) {
+      if (fUst.status === 'stoi' ? !u.stoi : (fUst.status && u.status !== fUst.status)) return false;
+      if (fUst.prio && u.priorytet !== fUst.prio) return false;
+      if (fUst.obszar && u.obszar !== fUst.obszar) return false;
+      return !fUst.q || norm(u.nazwa + ' ' + u.idUrzadzenia + ' ' + u.opis + ' ' + u.zglaszajacy + ' ' + u.osoba).indexOf(fUst.q) >= 0;
+    });
+    $('tabelaUsterek').innerHTML = tabelaUsterek(lista, false);
+  }
+  function ustawSeg(id, v) {
+    $(id).querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-v') === v); });
+  }
 
+  // ---------- HISTORIA MASZYN ----------
+  function renderListaMaszyn() {
+    var q = norm($('szukajMaszyny').value).trim();
+    var otwarte = {};
+    (DANE.aktualneUsterki || []).forEach(function (u) { otwarte[u.idUrzadzenia] = (otwarte[u.idUrzadzenia] || 0) + 1; });
+    var grupy = {}, kolejnosc = [];
+    (DANE.maszyny || []).forEach(function (m) {
+      if (q && norm(m.id + ' ' + m.nazwa + ' ' + m.obszar).indexOf(q) < 0) return;
+      if (!grupy[m.obszar]) { grupy[m.obszar] = []; kolejnosc.push(m.obszar); }
+      grupy[m.obszar].push(m);
+    });
+    $('listaMaszyn').innerHTML = kolejnosc.length ? kolejnosc.map(function (o) {
+      return '<div class="grupa"><span class="kropka" style="background:' + kolor(o) + '"></span>' + esc(o) + '</div>' +
+        grupy[o].map(function (m) {
+          return '<button class="maszyna-poz' + (m.id === wybranaMaszyna ? ' active' : '') + '" data-maszyna="' + esc(m.id) + '">' +
+            '<span class="id">' + esc(m.id) + '</span><span class="nazwa">' + esc(m.nazwa) + '</span>' +
+            (otwarte[m.id] ? '<span class="lb" title="otwarte usterki">' + otwarte[m.id] + '</span>' : '') + '</button>';
+        }).join('');
+    }).join('') : '<div class="pusto">Brak maszyn dla „' + esc(q) + '”.</div>';
+  }
+  function pokazMaszyne(id) {
+    wybranaMaszyna = id;
+    HIST = null; filtrHist = '';
+    ustawWidok('historia');
+    renderListaMaszyn();
+    var el = document.querySelector('.maszyna-poz.active');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+    $('kartaMaszyny').innerHTML = '<div class="pusto">Wczytywanie historii maszyny ' + esc(id) + '…</div>';
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (wybranaMaszyna !== id) return;
+        if (!res) { $('kartaMaszyny').innerHTML = '<div class="pusto">Nie znaleziono maszyny ' + esc(id) + '.</div>'; return; }
+        HIST = res; renderKartaMaszyny();
+      })
+      .withFailureHandler(function (err) { $('kartaMaszyny').innerHTML = '<div class="blad">Błąd: ' + esc(err.message) + '</div>'; })
+      .pobierzHistorieMaszynyZarzad(id, DEMO);
+  }
+  function renderKartaMaszyny() {
+    var r = HIST, m = r.maszyna, s = r.statystyki;
+    var html = '<h3>' + esc(m.nazwa) + '</h3>' +
+      '<div class="meta"><span class="id">ID ' + esc(m.id) + '</span> · <span class="kropka" style="background:' + kolor(m.obszar) + '"></span>' + esc(m.obszar) +
+        (m.czestotliwosc ? ' · przeglądy: ' + esc(m.czestotliwosc) : '') + '</div>' +
+      '<div class="mini">' +
+        '<div><small>Przeglądy</small><b>' + s.przeglady + '</b><span>' + (s.nok ? s.nok + ' z wynikiem NOK' : 'wszystkie OK') + '</span></div>' +
+        '<div><small>Usterki</small><b>' + s.usterki + '</b><span>' + (s.otwarte ? '<span style="color:var(--danger);display:inline;">' + s.otwarte + ' otwarte</span>' : 'brak otwartych') + '</span></div>' +
+        '<div><small>Przestoje</small><b>' + String(s.przestojH).replace('.', ',') + ' h</b><span>łącznie</span></div>' +
+        '<div><small>Następny przegląd</small><b style="font-size:.95rem;">' + esc(s.nastepnyPrzeglad ? s.nastepnyPrzeglad.substring(0, 10) : '—') + '</b>' +
+          '<span>ostatni: ' + esc(s.ostatniPrzeglad ? s.ostatniPrzeglad.substring(0, 10) : '—') + '</span></div>' +
+      '</div>';
+    if (r.otwarte.length) {
+      html += '<h2 style="font-size:.9rem;margin:0 0 8px;">🔧 Otwarte usterki (' + r.otwarte.length + ')</h2><div class="tabela" style="margin-bottom:16px;"><table>' +
+        r.otwarte.map(function (u) {
+          return '<tr><td>' + (u.stoi ? '<span class="badge b-stoi">⛔ STOI</span> ' : '') +
+            '<span class="badge ' + (u.status === 'W trakcie' ? 'b-uwaga' : 'b-zle') + '">' + esc(u.status) + '</span> ' +
+            '<span class="badge b-szary">' + esc(u.priorytet) + '</span><div style="margin-top:4px;">' + esc(u.opis) + '</div></td>' +
+            '<td class="id" style="white-space:nowrap;">' + fmtData(u.data) + '<div>' + esc(u.zglaszajacy) + (u.osoba ? ' → ' + esc(u.osoba) : '') + '</div></td></tr>';
+        }).join('') + '</table></div>';
+    }
+    html += '<h2 style="font-size:.9rem;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;">🕘 Historia zdarzeń' +
+      '<span class="seg" id="fHist"><button data-v=""' + (filtrHist === '' ? ' class="active"' : '') + '>Wszystko</button>' +
+      '<button data-v="przeglad"' + (filtrHist === 'przeglad' ? ' class="active"' : '') + '>Przeglądy</button>' +
+      '<button data-v="usterka"' + (filtrHist === 'usterka' ? ' class="active"' : '') + '>Usterki</button></span></h2>';
+    var hist = r.historia.filter(function (h) { return !filtrHist || h.typ === filtrHist; });
+    html += hist.length ? '<ul class="os">' + hist.map(function (h) {
+      return '<li class="' + (h.ok ? '' : 'zle') + (h.typ === 'usterka' ? ' ust' : '') + '"><b>' + esc(h.tytul) + '</b>' +
+        (h.stoi ? ' <span class="badge b-stoi">STOI</span>' : '') + (h.przestoj ? ' <span class="badge b-szary">przestój ' + String(h.przestoj).replace('.', ',') + ' h</span>' : '') +
+        '<div class="kiedy">' + fmtData(h.data) + (h.kto ? ' · ' + esc(h.kto) : '') + (h.czas ? ' · ' + esc(h.czas) + ' h' : '') + '</div>' +
+        (h.opis ? '<div class="op">' + esc(h.opis) + '</div>' : '') + '</li>';
+    }).join('') + '</ul>' : '<div class="pusto">Brak zdarzeń.</div>';
+    $('kartaMaszyny').innerHTML = html;
+  }
+
+  // ---------- START ----------
   function render() {
     if (BLAD || !DANE) {
-      document.getElementById('blad').style.display = 'block';
-      document.getElementById('blad').textContent = '❌ Nie udało się wczytać danych: ' + (BLAD || 'nieznany błąd');
+      $('blad').hidden = false;
+      $('blad').textContent = '❌ Nie udało się wczytać danych: ' + (BLAD || 'nieznany błąd');
       return;
     }
-    document.getElementById('stanNa').textContent = 'Stan na ' + DANE.aktualizacja;
-    if (DEMO) document.getElementById('demo').style.display = 'block';
+    $('stanNa').textContent = 'Stan na ' + DANE.aktualizacja;
+    $('demo').hidden = !DEMO;
+    $('zakladki').hidden = false;
+    var n = (DANE.aktualneUsterki || []).length;
+    $('lbUsterki').textContent = n; $('lbUsterki').hidden = !n;
 
-    var html = '';
-    html += '<div class="kafelki">' +
-      kafelekRealizacja(DANE) +
-      kafelekProste('Otwarte usterki — priorytet Wysoki', DANE.otwarteWysokieLiczba) +
-      kafelekProste('Maszyny aktualnie stojące', DANE.maszynyStojace) +
-      kafelekUDT(DANE) +
-      '</div>';
+    var obszary = [];
+    (DANE.aktualneUsterki || []).forEach(function (u) { if (u.obszar && obszary.indexOf(u.obszar) < 0) obszary.push(u.obszar); });
+    obszary.sort().forEach(function (o) { var op = document.createElement('option'); op.value = o; op.textContent = o; $('fObszar').appendChild(op); });
 
-    html += '<div class="karta"><h2>Trend — ostatnie miesiące</h2><div class="wykresy">' +
-      '<div><div class="bar-lbl" style="margin-bottom:8px;font-weight:600;color:var(--navy);">Realizacja planu (%)</div>' +
-        wykresBar(DANE.trendRealizacji, 'pct', '%', function (v) { return v.toFixed(0) + '%'; }) + '</div>' +
-      '<div><div class="bar-lbl" style="margin-bottom:8px;font-weight:600;color:var(--navy);">Zgłoszone usterki (szt.)</div>' +
-        wykresBar(DANE.trendUsterek, 'liczba', '', function (v) { return v; }) + '</div>' +
-      '</div></div>';
+    renderPrzeglad(); renderUsterki(); renderListaMaszyn();
 
-    html += '<div class="karta"><h2>Najbardziej awaryjne maszyny</h2>' + tabelaTop(DANE.topMaszyny) + '</div>';
-    html += '<div class="karta"><h2>Otwarte usterki — priorytet Wysoki</h2>' + tabelaWysokie(DANE.otwarteWysokie) + '</div>';
+    $('zakladki').addEventListener('click', function (e) { var b = e.target.closest('.zakladka'); if (b) ustawWidok(b.getAttribute('data-w')); });
+    document.addEventListener('click', function (e) {
+      var akcja = e.target.closest('[data-akcja]');
+      if (akcja) {
+        e.preventDefault();
+        var a = akcja.getAttribute('data-akcja');
+        fUst = { status: a === 'usterki-stoi' ? 'stoi' : '', prio: a === 'usterki-wysokie' ? 'Wysoki' : '', obszar: '', q: '' };
+        ustawSeg('fStatus', fUst.status); ustawSeg('fPrio', fUst.prio); $('fObszar').value = ''; $('fSzukaj').value = '';
+        renderUsterki(); ustawWidok('usterki'); return;
+      }
+      var m = e.target.closest('[data-maszyna]');
+      if (m) { pokazMaszyne(m.getAttribute('data-maszyna')); return; }
+      var h = e.target.closest('#fHist button');
+      if (h && HIST) { filtrHist = h.getAttribute('data-v'); renderKartaMaszyny(); }
+    });
+    $('fStatus').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; fUst.status = b.getAttribute('data-v'); ustawSeg('fStatus', fUst.status); renderUsterki(); });
+    $('fPrio').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; fUst.prio = b.getAttribute('data-v'); ustawSeg('fPrio', fUst.prio); renderUsterki(); });
+    $('fObszar').addEventListener('change', function () { fUst.obszar = this.value; renderUsterki(); });
+    $('fSzukaj').addEventListener('input', function () { fUst.q = norm(this.value).trim(); renderUsterki(); });
+    $('szukajMaszyny').addEventListener('input', renderListaMaszyn);
 
-    document.getElementById('tresc').innerHTML = html;
+    // link z zakładką: #usterki, #historia=1.12
+    var hash = decodeURIComponent(String(location.hash || '').replace(/^#/, ''));
+    if (hash.indexOf('historia=') === 0) pokazMaszyne(hash.substring(9));
+    else if (hash === 'usterki' || hash === 'historia') ustawWidok(hash, true);
   }
 
   render();

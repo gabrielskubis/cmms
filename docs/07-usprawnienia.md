@@ -52,6 +52,20 @@ Bez zmian: sposób zapisu do arkuszy, komunikat DTR, struktura kolumn, kody QR i
 
 Warunek: Google podaje mail tylko, gdy aplikację wdrożyło konto z tej samej domeny co technik (np. oba @holcim.com) albo Web App działa jako „User accessing the web app”. Po wdrożeniu uruchom raz menu „👷 Utwórz / uporządkuj listę pracowników”, żeby dodać listę wyboru z nowym statusem i formatowanie.
 
+## 1b. Wdrożone — wersja 4.10 (szybkość, usterki, Panel Zarządu)
+
+**Aplikacja przeglądów**
+- **Szybszy start**: wszystko, czego strona potrzebuje, przychodzi w jednej odpowiedzi (lista przeglądów + pracownicy); lista jest spakowana — opis czynności i nazwa maszyny wysyłane raz, nie przy każdym terminie (na danych z Nowej Huty: 48 KB zamiast 195 KB). Po skanie QR serwer czyta tylko przeglądy tej maszyny, bez drugiego zapytania. Historia i usterki maszyny wczytują się dopiero po jej wybraniu.
+- **Otwarte usterki do obsłużenia**: kafel „Otwarte usterki” (laptop), przycisk 🔧 obok wyboru obszaru (telefon) i pozycja w menu (duży ekran) pokazują listę wszystkich otwartych usterek — maszyny stojące i priorytet Wysoki na górze. Kliknięcie otwiera maszynę z rozwiniętą obsługą tej usterki (W trakcie / Usunięta).
+- **Powrót do ekranu głównego**: kliknięcie „📋 Przeglądy UR” albo przycisk ⌂ — czyści wybór, wyszukiwanie i tryb QR.
+- **Komunikaty** na pełnym, kontrastowym tle (zielony / czerwony / niebieski), znikają same.
+- **Stare wpisy usterek** (bez kolumny „ID Urządzenia”, kolumny przesunięte) są czytane poprawnie, a obsłużenie takiej usterki z aplikacji wyrównuje jej wiersz w arkuszu.
+
+**Panel Zarządu** (`?panel=zarzad`) — zakładki:
+- **Przegląd**: realizacja planu, usterki Wysoki, maszyny stojące, **przestoje z 30 dni**, UDT; **realizacja wg obszaru** (30 dni: wykonane/plan, zaległe, NOK); trendy; najbardziej awaryjne maszyny; najpilniejsze usterki.
+- **Aktualne usterki**: wszystkie otwarte, filtry status (zgłoszone / w trakcie / stoi), priorytet, obszar, wyszukiwarka; kto obsługuje, ile dni czeka.
+- **Historia maszyn**: lista 110 maszyn wg obszaru z wyszukiwarką i licznikami otwartych usterek; karta maszyny — liczba przeglądów i NOK, usterki, łączny przestój, następny przegląd, otwarte usterki i oś czasu przeglądów/awarii (z opisem naprawy) z filtrem. Kliknięcie maszyny w innych tabelach przenosi do jej historii.
+
 ## 2. Propozycje kolejnych usprawnień
 
 Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do którego celu SMART się przyczynia.

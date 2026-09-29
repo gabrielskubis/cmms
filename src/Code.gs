@@ -22,6 +22,10 @@
  *  - Formularz: brak dublowania kolumn przy przebudowie, ochrona przed podwójnym zapisem odpowiedzi.
  *  - Ręczne zmiany w harmonogramie synchronizują się między arkuszem zbiorczym i miesięcznym.
  *
+ * V4.10 - SZYBSZE ŁADOWANIE:
+ *  - Start aplikacji w jednej odpowiedzi (lista + pracownicy; po skanie QR tylko dane tej maszyny).
+ *  - Lista przeglądów spakowana (spakujPrzeglady_) - kilka razy mniej danych na telefon.
+ *
  * V4.9 - WYKONAWCA Z KONTA GOOGLE:
  *  - Kolumna "Email" w "6. Pracownicy" (maile przeniesione z kolumny "Rola"), dopasowanie bez polskich znaków.
  *  - Nowe konta dopisują się jako "DO ZATWIERDZENIA" i nie trafiają na listy wyboru innych osób.
@@ -159,13 +163,23 @@ function doGet(e) {
   var param = (e && e.parameter && e.parameter.id) ? String(e.parameter.id).trim() : "";
 
   try {
-    var lista = pobierzWszystkiePrzegladyDoFormularza("");
-    var wybrane = rozwinParametrQR_(param, lista);
-    if (wybrane && !lista.some(function (p) { return normalizujId_(p.idPrzegladu) === normalizujId_(wybrane); })) {
-      lista = pobierzWszystkiePrzegladyDoFormularza(wybrane);
+    // Wszystko, czego strona potrzebuje na start, idzie w JEDNEJ odpowiedzi (bez dodatkowych zapytań):
+    //  - skan QR maszyny: tylko przeglądy tej maszyny (bez czytania całej listy),
+    //  - zwykłe wejście: lista w wersji spakowanej (opis czynności raz na maszynę, nie przy każdym terminie).
+    var lista = [], wybrane = "", startMaszyny = null;
+    if (param && param.indexOf("PRZ-") !== 0) {
+      startMaszyny = pobierzPrzegladyMaszyny(param);
+    } else {
+      lista = pobierzWszystkiePrzegladyDoFormularza("");
+      wybrane = param;
+      if (wybrane && !lista.some(function (p) { return normalizujId_(p.idPrzegladu) === normalizujId_(wybrane); })) {
+        lista = pobierzWszystkiePrzegladyDoFormularza(wybrane);
+      }
     }
 
-    template.pobranePrzeglady = lista;
+    template.pobranePrzeglady = spakujPrzeglady_(lista);
+    template.startMaszyny = startMaszyny;
+    template.pracownicy = pobierzPracownikow();
     template.wybraneId = wybrane;
     template.parametrQR = param;
     template.bladLadowania = "";
@@ -191,6 +205,8 @@ function doGet(e) {
     template.zalogowanyEmail = "";
     template.zalogowanyNazwisko = "";
     template.zalogowanyStatus = "";
+    template.startMaszyny = null;
+    template.pracownicy = null;
   }
 
   return template.evaluate()
@@ -1019,7 +1035,23 @@ function pobierzWszystkiePrzegladyDoFormularza(idWymagane) {
 function pobierzDaneDoFormularzaMobile() {
   // POPRAWKA: wcześniej zwracało ~2000 pozycji do 31.12 z pięciu arkuszy (telefon "wisiał"
   // na Wczytywaniu). Teraz to samo źródło co formularz w arkuszu: zaległe + dziś + 14 dni.
-  return pobierzWszystkiePrzegladyDoFormularza("");
+  return spakujPrzeglady_(pobierzWszystkiePrzegladyDoFormularza(""));
+}
+
+/**
+ * Lista przeglądów w zwartej postaci dla aplikacji (ok. 6x mniej danych do przesłania):
+ * nazwa/obszar maszyny i opis czynności są wysyłane raz, a każdy termin to krótki wiersz.
+ * Rozpakowuje ją funkcja rozpakuj() w FormularzMobile.html.
+ */
+function spakujPrzeglady_(lista) {
+  var zakresy = [], indeks = {}, maszyny = {}, wiersze = [];
+  (lista || []).forEach(function (p) {
+    var z = String(p.zakres || "");
+    if (!Object.prototype.hasOwnProperty.call(indeks, z)) { indeks[z] = zakresy.length; zakresy.push(z); }
+    maszyny[p.idUrzadzenia] = [p.nazwaUrzadzenia, p.obszar];
+    wiersze.push([p.idPrzegladu, p.idUrzadzenia, p.czestotliwosc, p.dataPlanowana, p.dni, indeks[z], p.czyWykonany ? 1 : 0]);
+  });
+  return { v: 2, z: zakresy, m: maszyny, w: wiersze };
 }
 
 /**
@@ -2571,6 +2603,22 @@ function czyWierszUsterkiPrzesuniety_(w) {
 }
 
 /**
+ * Wiersz z "4. Usterki i Awarie" w jednym, aktualnym układzie kolumn.
+ * Stare wpisy (bez kolumny "ID Urządzenia" - wszystko przesunięte o jedną w lewo) są wyrównywane,
+ * a maszyna jest szukana po nazwie. Zwraca kopię wiersza (arkusz się nie zmienia).
+ */
+function wyrownajWierszUsterki_(r, mapa) {
+  var w = r.slice();
+  if (czyWierszUsterkiPrzesuniety_(w)) {
+    w = [w[0], w[1], ""].concat(w.slice(2));
+    var u = mapa ? znajdzUrzadzeniePoNazwie_(w[4], mapa, w[3]) : null;
+    if (u) w[2] = u.id;
+    w.przesuniety = true;
+  }
+  return w;
+}
+
+/**
  * Szuka urządzenia po nazwie. Zwraca urządzenie tylko przy JEDNOZNACZNYM dopasowaniu
  * (np. "Waga cementu" występuje w dwóch obszarach - wtedy rozstrzyga obszar).
  */
@@ -3417,6 +3465,16 @@ function zmienStatusUsterki(p) {
     }
     if (w < 0) return { success: false, message: "Nie znaleziono usterki " + p.idUsterki + "." };
 
+    // stary wpis z przesuniętymi kolumnami - najpierw wyrównaj wiersz, żeby status trafił we właściwe miejsce
+    var kolW = Math.max(12, Math.min(15, sh.getLastColumn()));
+    var surowy = sh.getRange(w, 1, 1, kolW).getValues()[0];
+    if (czyWierszUsterkiPrzesuniety_(surowy.map(function (x) { return x instanceof Date ? "x" : x; }))) {
+      var wyrownany = wyrownajWierszUsterki_(surowy, pobierzMapeUrzadzen_(ss)).slice(0, Math.max(kolW, 12));
+      while (wyrownany.length < kolW) wyrownany.push("");
+      sh.getRange(w, 3).setNumberFormat("@");
+      sh.getRange(w, 1, 1, kolW).setValues([wyrownany.slice(0, kolW)]);
+    }
+
     var osoba = String(p.osoba || "").trim();
     if (!osoba) return { success: false, message: "Wybierz, kto obsługuje usterkę." };
 
@@ -3881,7 +3939,28 @@ function daneDemoZarzadu_() {
         opis: "Nieszczelność zaworu dozującego – wysyp materiału", dni: 4 },
       { id: "2.4", nazwa: nazwa("2.4", "Bęben suszarni"), data: dataTemu(1),
         opis: "Podwyższona temperatura łożyska napędu bębna", dni: 1 }
-    ]
+    ],
+    przestojH30: 11.5,
+    realizacjaObszary: [
+      { obszar: "Kompresory", plan: 60, wykonane: 58, nok: 1, pct: 96.7, zalegle: 2 },
+      { obszar: "MIXER HRB", plan: 74, wykonane: 66, nok: 3, pct: 89.2, zalegle: 8 },
+      { obszar: "Rozdzielnie El.", plan: 22, wykonane: 22, nok: 0, pct: 100, zalegle: 0 },
+      { obszar: "Sprężone Powietrze", plan: 30, wykonane: 27, nok: 1, pct: 90, zalegle: 3 },
+      { obszar: "Suche Mieszanki", plan: 210, wykonane: 188, nok: 6, pct: 89.5, zalegle: 22 },
+      { obszar: "Suszarnia Piachu", plan: 48, wykonane: 45, nok: 2, pct: 93.8, zalegle: 3 }
+    ],
+    aktualneUsterki: [
+      { id: "UST-D1", data: dataTemu(4), idUrzadzenia: "1.12", nazwa: nazwa("1.12", "Pakowaczka A"), obszar: "Suche Mieszanki",
+        opis: "Nieszczelność zaworu dozującego – wysyp materiału", priorytet: "Wysoki", zglaszajacy: "Jan Kowalski",
+        status: "W trakcie", osoba: "Piotr Nowak", stoi: false, dni: 4 },
+      { id: "UST-D2", data: dataTemu(1), idUrzadzenia: "2.4", nazwa: nazwa("2.4", "Bęben suszarni"), obszar: "Suszarnia Piachu",
+        opis: "Podwyższona temperatura łożyska napędu bębna", priorytet: "Wysoki", zglaszajacy: "Piotr Nowak",
+        status: "Zgłoszona", osoba: "", stoi: true, dni: 1 },
+      { id: "UST-D3", data: dataTemu(9), idUrzadzenia: "4.2", nazwa: nazwa("4.2", "Kompresor BOGE S150 x2"), obszar: "Kompresory",
+        opis: "Wyciek oleju przy filtrze", priorytet: "Średni", zglaszajacy: "Jan Kowalski",
+        status: "Zgłoszona", osoba: "", stoi: false, dni: 9 }
+    ],
+    maszyny: listaMaszynPanelu_(mapa)
   };
 }
 
@@ -3914,6 +3993,7 @@ function zbierzDaneZarzadu2_() {
 
   // --- Harmonogram: realizacja planu, ostatnie 3 miesiące ---
   var statsByMonth = {};
+  var obszary30 = {}, granica30 = dzis.getTime() - 30 * 86400000;
   var sh = ss.getSheetByName("2. Harmonogram");
   if (sh && sh.getLastRow() > 1) {
     sh.getRange(2, 1, sh.getLastRow() - 1, 11).getDisplayValues().forEach(function (r) {
@@ -3922,11 +4002,25 @@ function zbierzDaneZarzadu2_() {
       if (isNaN(d.getTime())) return;
       if (d.getTime() > dzis.getTime()) return; // przyszłe terminy nie liczą się do realizacji
       var key = kluczM(d);
+      var wyk = String(r[8]).trim().toLowerCase() === "wykonany";
       if (!statsByMonth[key]) statsByMonth[key] = { total: 0, done: 0, label: etykM(d) };
       statsByMonth[key].total++;
-      if (String(r[8]).trim().toLowerCase() === "wykonany") statsByMonth[key].done++;
+      if (wyk) statsByMonth[key].done++;
+      if (d.getTime() >= granica30) {
+        var ob = String(r[2]).trim() || "—";
+        if (!obszary30[ob]) obszary30[ob] = { obszar: ob, plan: 0, wykonane: 0, nok: 0 };
+        obszary30[ob].plan++;
+        if (wyk) obszary30[ob].wykonane++;
+        if (String(r[9]).trim().toUpperCase() === "NOK") obszary30[ob].nok++;
+      }
     });
   }
+  var realizacjaObszary = Object.keys(obszary30).sort().map(function (k) {
+    var o = obszary30[k];
+    o.pct = o.plan ? Math.round(o.wykonane / o.plan * 1000) / 10 : 0;
+    o.zalegle = o.plan - o.wykonane;
+    return o;
+  });
   var kluczeM = Object.keys(statsByMonth).sort();
   var trendRealizacji = kluczeM.slice(-3).map(function (k) {
     var s = statsByMonth[k];
@@ -3939,7 +4033,7 @@ function zbierzDaneZarzadu2_() {
 
   // --- Usterki: otwarte wysokie, maszyny stojące, top maszyny, trend zgłoszeń ---
   var mapa = pobierzMapeUrzadzen_(ss);
-  var otwarteWysokie = [], maszynyStojace = 0, liczTop = {}, usterkiByMonth = {};
+  var otwarteWysokie = [], maszynyStojace = 0, liczTop = {}, usterkiByMonth = {}, przestojH30 = 0;
   var ust = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
   if (ust && ust.getLastRow() > 1) {
     var kol = Math.min(15, ust.getLastColumn());
@@ -3956,6 +4050,8 @@ function zbierzDaneZarzadu2_() {
       if (otwarta && stoi) maszynyStojace++;
 
       var dataZgl = new Date(String(r[1]).replace(" ", "T"));
+      var przestoj = parseFloat(String(r[14] || "").replace(",", "."));
+      if (!isNaN(przestoj) && !isNaN(dataZgl.getTime()) && dataZgl.getTime() >= granica30) przestojH30 += przestoj;
       if (otwarta && prio === "Wysoki") {
         var dni = isNaN(dataZgl.getTime()) ? null : Math.floor((dzis.getTime() - dataZgl.getTime()) / 86400000);
         otwarteWysokie.push({
@@ -4003,7 +4099,102 @@ function zbierzDaneZarzadu2_() {
     trendRealizacji: trendRealizacji,
     trendUsterek: trendUsterek,
     topMaszyny: topMaszyny,
-    otwarteWysokie: otwarteWysokie.slice(0, 8)
+    otwarteWysokie: otwarteWysokie.slice(0, 8),
+    przestojH30: Math.round(przestojH30 * 10) / 10,
+    realizacjaObszary: realizacjaObszary,
+    aktualneUsterki: pobierzOtwarteUsterki(),
+    maszyny: listaMaszynPanelu_(mapa)
+  };
+}
+
+function listaMaszynPanelu_(mapa) {
+  return Object.keys(mapa).map(function (k) { return { id: mapa[k].id, nazwa: mapa[k].nazwa, obszar: mapa[k].obszar }; })
+    .sort(function (a, b) { return a.id.localeCompare(b.id, "pl", { numeric: true }); });
+}
+
+/**
+ * Panel Zarządu: pełna karta jednej maszyny - statystyki, otwarte usterki i historia zdarzeń.
+ * Wywoływane dopiero po wybraniu maszyny (panel ładuje się szybko).
+ */
+function pobierzHistorieMaszynyZarzad(idUrzadzenia, demo) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mapa = pobierzMapeUrzadzen_(ss);
+  var urz = mapa[normalizujId_(idUrzadzenia)];
+  if (!urz) return null;
+  if (demo) return daneDemoHistoriiMaszyny_(urz);
+  var klucz = normalizujId_(urz.id);
+  var dzisStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
+  var st = { usterki: 0, otwarte: 0, przestojH: 0, przeglady: 0, nok: 0, ostatniPrzeglad: "", ostatniaUsterka: "", nastepnyPrzeglad: "" };
+  var zdarzenia = [], otwarte = [];
+
+  var ust = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
+  if (ust && ust.getLastRow() > 1) {
+    var kol = Math.max(12, Math.min(15, ust.getLastColumn()));
+    ust.getRange(2, 1, ust.getLastRow() - 1, kol).getDisplayValues().forEach(function (r) {
+      if (!String(r[0]).trim() || normalizujId_(r[2]) !== klucz) return;
+      var status = String(r[8]).trim() || "Zgłoszona";
+      var data = String(r[1]).trim();
+      var przestoj = parseFloat(String(r[14] || "").replace(",", "."));
+      st.usterki++;
+      if (!isNaN(przestoj)) st.przestojH += przestoj;
+      if (data > st.ostatniaUsterka) st.ostatniaUsterka = data;
+      var u = { id: String(r[0]).trim(), data: data, opis: String(r[5]).trim(), priorytet: String(r[6]).trim(),
+                zglaszajacy: String(r[7]).trim(), status: status, osoba: String(r[9] || "").trim(),
+                stoi: String(r[13] || "").trim().toUpperCase() === "TAK" };
+      if (status !== "Usunięta") { st.otwarte++; otwarte.push(u); }
+      zdarzenia.push({ data: data, typ: "usterka", ok: status === "Usunięta",
+        tytul: status === "Usunięta" ? "Usterka usunięta" : "Usterka · " + status,
+        opis: u.opis + (String(r[11] || "").trim() ? " → naprawa: " + String(r[11]).trim() : ""),
+        kto: u.zglaszajacy + (u.osoba ? " / " + u.osoba : ""),
+        przestoj: isNaN(przestoj) ? null : przestoj, priorytet: u.priorytet, stoi: u.stoi });
+    });
+  }
+
+  var rej = ss.getSheetByName("3. Rejestr Przeglądów");
+  if (rej && rej.getLastRow() > 1) {
+    rej.getRange(2, 1, rej.getLastRow() - 1, 11).getDisplayValues().forEach(function (r) {
+      if (normalizujId_(r[2]) !== klucz) return;
+      var ok = String(r[8]).trim().toUpperCase() !== "NOK";
+      var data = String(r[5]).trim();
+      st.przeglady++;
+      if (!ok) st.nok++;
+      if (data > st.ostatniPrzeglad) st.ostatniPrzeglad = data;
+      zdarzenia.push({ data: data, typ: "przeglad", ok: ok, tytul: "Przegląd · " + (ok ? "OK" : "NOK"),
+        opis: String(r[9]).trim(), kto: String(r[6]).trim(), czas: String(r[7]).trim() });
+    });
+  }
+
+  var harm = ss.getSheetByName("2. Harmonogram");
+  if (harm && harm.getLastRow() > 1) {
+    harm.getRange(2, 1, harm.getLastRow() - 1, 9).getDisplayValues().forEach(function (r) {
+      if (normalizujId_(r[1]) !== klucz || String(r[8]).trim().toLowerCase() === "wykonany") return;
+      var d = String(r[6]).trim().substring(0, 10);
+      if (d >= dzisStr && (!st.nastepnyPrzeglad || d < st.nastepnyPrzeglad.substring(0, 10))) st.nastepnyPrzeglad = d + " · " + String(r[4]).trim();
+    });
+  }
+
+  st.przestojH = Math.round(st.przestojH * 10) / 10;
+  zdarzenia.sort(function (a, b) { return a.data < b.data ? 1 : -1; });
+  otwarte.sort(function (a, b) { return a.data < b.data ? 1 : -1; });
+  return { maszyna: urz, statystyki: st, otwarte: otwarte, historia: zdarzenia.slice(0, 60) };
+}
+
+function daneDemoHistoriiMaszyny_(urz) {
+  var tz = Session.getScriptTimeZone();
+  function temu(dni) { return Utilities.formatDate(new Date(Date.now() - dni * 86400000), tz, "yyyy-MM-dd HH:mm"); }
+  return {
+    maszyna: urz,
+    statystyki: { usterki: 5, otwarte: 1, przestojH: 7.5, przeglady: 38, nok: 3, ostatniPrzeglad: temu(1),
+                  ostatniaUsterka: temu(4), nastepnyPrzeglad: temu(-6).substring(0, 10) + " · Tygodniowy" },
+    otwarte: [{ id: "UST-D1", data: temu(4), opis: "Nieszczelność zaworu dozującego – wysyp materiału", priorytet: "Wysoki",
+                zglaszajacy: "Jan Kowalski", status: "W trakcie", osoba: "Piotr Nowak", stoi: false }],
+    historia: [
+      { data: temu(1), typ: "przeglad", ok: true, tytul: "Przegląd · OK", opis: "Checklista: 5/5 OK", kto: "Piotr Nowak", czas: "0,5" },
+      { data: temu(4), typ: "usterka", ok: false, tytul: "Usterka · W trakcie", opis: "Nieszczelność zaworu dozującego", kto: "Jan Kowalski / Piotr Nowak", priorytet: "Wysoki", stoi: false },
+      { data: temu(8), typ: "przeglad", ok: false, tytul: "Przegląd · NOK", opis: "Checklista: 4/5 OK, 1 z problemem", kto: "Jan Kowalski", czas: "1" },
+      { data: temu(15), typ: "usterka", ok: true, tytul: "Usterka usunięta", opis: "Zerwany pas napędu → naprawa: wymiana pasa", kto: "Piotr Nowak", przestoj: 3.5, priorytet: "Wysoki", stoi: true },
+      { data: temu(22), typ: "przeglad", ok: true, tytul: "Przegląd · OK", opis: "", kto: "Piotr Nowak", czas: "0,5" }
+    ]
   };
 }
 /**
@@ -4267,7 +4458,8 @@ function pobierzStatystykiPrzegladow() {
   var sh = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
   if (sh && sh.getLastRow() > 1) {
     var kol = Math.max(9, Math.min(14, sh.getLastColumn()));
-    sh.getRange(2, 1, sh.getLastRow() - 1, kol).getDisplayValues().forEach(function (r) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, kol).getDisplayValues().forEach(function (wiersz) {
+      var r = wyrownajWierszUsterki_(wiersz, null);
       if (!String(r[0]).trim() || String(r[8]).trim() === "Usunięta") return;
       wynik.otwarteUsterki++;
       if (String(r[13] || "").trim().toUpperCase() === "TAK") wynik.maszynyStoja++;
@@ -4296,4 +4488,41 @@ function otworzAplikacjePrzegladow() {
     'if (w) google.script.host.close();</script>'
   ).setWidth(380).setHeight(190);
   SpreadsheetApp.getUi().showModalDialog(html, "🖥️ Aplikacja przeglądów");
+}
+
+/**
+ * Wszystkie otwarte usterki (status inny niż "Usunięta") - lista do obsługi w aplikacji.
+ * Kolejność: maszyny stojące, potem priorytet, potem najstarsze zgłoszenia.
+ */
+function pobierzOtwarteUsterki() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
+  if (!sh || sh.getLastRow() < 2) return [];
+  var mapa = pobierzMapeUrzadzen_(ss);
+  var tz = ss.getSpreadsheetTimeZone();
+  var dzis = new Date(Utilities.formatDate(new Date(), tz, "yyyy-MM-dd") + "T00:00:00").getTime();
+  var WAGA = { "Wysoki": 0, "Średni": 1, "Niski": 2 };
+  var kol = Math.max(12, Math.min(15, sh.getLastColumn()));
+  var wynik = [];
+  sh.getRange(2, 1, sh.getLastRow() - 1, kol).getDisplayValues().forEach(function (wiersz) {
+    if (!String(wiersz[0]).trim()) return;
+    var r = wyrownajWierszUsterki_(wiersz, mapa);
+    var status = String(r[8]).trim() || "Zgłoszona";
+    if (status === "Usunięta") return;
+    var idU = String(r[2]).trim();
+    var u = mapa[normalizujId_(idU)] || null;
+    var d = new Date(String(r[1]).trim().substring(0, 10) + "T00:00:00").getTime();
+    wynik.push({
+      id: String(r[0]).trim(), data: String(r[1]).trim(),
+      idUrzadzenia: u ? u.id : idU, nazwa: String(r[4]).trim() || (u ? u.nazwa : idU), obszar: String(r[3]).trim() || (u ? u.obszar : ""),
+      znanaMaszyna: !!u && !r.przesuniety, staryUklad: !!r.przesuniety, opis: String(r[5]).trim(), priorytet: String(r[6]).trim() || "Średni",
+      zglaszajacy: String(r[7]).trim(), status: status, osoba: String(r[9] || "").trim(),
+      stoi: String(r[13] || "").trim().toUpperCase() === "TAK",
+      dni: isNaN(d) ? null : Math.round((dzis - d) / 86400000)
+    });
+  });
+  wynik.sort(function (a, b) {
+    return (b.stoi - a.stoi) || ((a.priorytet in WAGA ? WAGA[a.priorytet] : 1) - (b.priorytet in WAGA ? WAGA[b.priorytet] : 1)) || ((b.dni || 0) - (a.dni || 0));
+  });
+  return wynik;
 }
