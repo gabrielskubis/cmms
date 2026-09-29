@@ -123,6 +123,9 @@
     .os .op { color: var(--muted); font-size: .85rem; }
     .filtr-hist { margin-bottom: 12px; }
 
+    .krec { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid currentColor;
+            border-right-color: transparent; animation: kreci .7s linear infinite; }
+    @keyframes kreci { to { transform: rotate(360deg); } }
     footer { text-align: center; font-size: .75rem; color: var(--muted); margin-top: 24px; }
     .demo { background: var(--warn-tlo); border: 1px solid var(--warn); color: var(--warn); border-radius: 10px; padding: 10px 16px; font-size: .85rem; margin-bottom: 16px; }
     .blad { background: var(--danger-tlo); border: 1px solid var(--danger); color: var(--danger); border-radius: 10px; padding: 16px 20px; font-size: .9rem; }
@@ -135,7 +138,7 @@
       <h1>📊 Panel Zarządu — CMMS Kraków / Nowa Huta</h1>
       <div class="sub" id="stanNa"></div>
     </div>
-    <button class="odswiez" onclick="location.reload()">↻ Odśwież dane</button>
+    <button class="odswiez" onclick="this.innerHTML='<span class=&quot;krec&quot; style=&quot;width:12px;height:12px;vertical-align:-2px;&quot;></span> Odświeżanie…';location.reload()">↻ Odśwież dane</button>
   </header>
 
   <div id="demo" class="demo" hidden>🧪 <b>Widok przykładowy</b> — dane symulowane. Tak panel będzie wyglądał po kilku miesiącach używania systemu.</div>
@@ -353,7 +356,7 @@
     renderListaMaszyn();
     var el = document.querySelector('.maszyna-poz.active');
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
-    $('kartaMaszyny').innerHTML = '<div class="pusto">Wczytywanie historii maszyny ' + esc(id) + '…</div>';
+    $('kartaMaszyny').innerHTML = '<div class="pusto" style="display:flex;align-items:center;gap:8px;"><span class="krec"></span>Wczytywanie historii maszyny ' + esc(id) + '…</div>';
     google.script.run
       .withSuccessHandler(function (res) {
         if (wybranaMaszyna !== id) return;

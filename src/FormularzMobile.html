@@ -84,6 +84,8 @@
              height: 38px; min-width: 38px; padding: 0 10px; font-size: .9rem; }
     .ikbtn:hover { border-color: var(--border-2); }
     .ikbtn .etk { display: none; margin-left: 6px; }
+    .ikbtn.kreci { cursor: wait; }
+    .ikbtn.kreci .ik-odsw { display: inline-block; animation: kreci .8s linear infinite; }
 
     /* ---------- KOMUNIKATY (toast) ---------- */
     .toast { position: fixed; z-index: 50; left: 12px; right: 12px; top: 64px; display: none; align-items: flex-start; gap: 10px;
@@ -284,6 +286,16 @@
                border-top-color: #fff; animation: kreci .7s linear infinite; vertical-align: -3px; margin-right: 8px; }
     .btn-glowny.zolty .krecioł { border-color: rgba(31, 41, 55, .3); border-top-color: #1f2937; }
     @keyframes kreci { to { transform: rotate(360deg); } }
+    .krec { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid currentColor;
+            border-right-color: transparent; animation: kreci .7s linear infinite; vertical-align: -3px; margin-right: 8px; opacity: .85; }
+    .laduje-txt { display: flex; align-items: center; justify-content: center; gap: 2px; color: var(--muted); font-size: .92rem; padding: 18px 4px; }
+    /* cienki pasek u góry ekranu – widać, że aplikacja pracuje (każde zapytanie do arkusza) */
+    .pasek-postepu { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 60; overflow: hidden; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .pasek-postepu i { position: absolute; top: 0; bottom: 0; width: 35%; background: var(--accent); border-radius: 3px; animation: postep 1.1s ease-in-out infinite; }
+    body.pracuje .pasek-postepu { opacity: 1; }
+    @keyframes postep { 0% { left: -35%; } 100% { left: 100%; } }
+    .ust.zapisuje { opacity: .75; pointer-events: none; }
+    .btn-glowny .krec, .duzy .krec { border-color: #fff; border-right-color: transparent; }
     .skrot { display: none; font-size: .7rem; font-weight: 700; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; opacity: .7; }
     .dtr-status { font-size: .8rem; color: var(--ok-tekst); margin-top: 8px; }
 
@@ -432,7 +444,7 @@
   </div>
   <div class="pasek-narzedzi">
     <button type="button" class="ikbtn" id="btnDom2" title="Ekran główny">⌂<span class="etk">Start</span></button>
-    <button type="button" class="ikbtn" id="btnOdswiez" title="Odśwież listę (R)">↻<span class="etk">Odśwież</span></button>
+    <button type="button" class="ikbtn" id="btnOdswiez" title="Odśwież listę (R)"><span class="ik-odsw">↻</span><span class="etk">Odśwież</span></button>
     <button type="button" class="ikbtn" id="btnMotyw" title="Motyw jasny / ciemny">◐</button>
   </div>
 </header>
@@ -443,6 +455,7 @@
   <button type="button" class="zamknij" id="toastZamknij" aria-label="Zamknij">✕</button>
 </div>
 
+<div class="pasek-postepu" aria-hidden="true"><i></i></div>
 <div class="zaslona" id="zaslona"></div>
 <main class="uklad">
 
@@ -685,6 +698,36 @@
   var TYTULY_TRYBU = { dozrobienia: 'Do zrobienia', zalegly: 'Zaległe', dzis: 'Na dziś', nadchodzacy: 'Następne 14 dni' };
   var szeroki = window.matchMedia ? window.matchMedia('(min-width: 900px)') : { matches: false };
 
+  // ---------- ZAPYTANIA DO SERWERA ----------
+  // RUN działa jak RUN, ale każde zapytanie zapala pasek postępu u góry ekranu.
+  var aktywneZapytania = 0;
+  function pracuje(d) {
+    aktywneZapytania = Math.max(0, aktywneZapytania + d);
+    document.body.classList.toggle('pracuje', aktywneZapytania > 0);
+  }
+  function opakujRun(ok, fail) {
+    var baza = google.script.run;
+    return new Proxy({}, { get: function (_, nazwa) {
+      if (nazwa === 'withSuccessHandler') return function (f) { return opakujRun(f, fail); };
+      if (nazwa === 'withFailureHandler') return function (f) { return opakujRun(ok, f); };
+      return function () {
+        pracuje(1);
+        var r = baza.withSuccessHandler(function (v) { pracuje(-1); if (ok) ok(v); })
+                    .withFailureHandler(function (e) { pracuje(-1); if (fail) fail(e); });
+        return r[nazwa].apply(r, arguments);
+      };
+    } });
+  }
+  var RUN = (window.Proxy && window.google && google.script && google.script.run) ? opakujRun(null, null) : google.script.run;
+  function ladowanie(tekst) { return '<div class="laduje-txt"><span class="krec"></span>' + (tekst || 'Wczytywanie…') + '</div>'; }
+  // kręciołek na przycisku na czas zapisu; zwraca funkcję przywracającą przycisk
+  function przyciskPracuje(btn, tekst) {
+    var html = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="krec"></span>' + tekst;
+    return function () { btn.disabled = false; btn.innerHTML = html; };
+  }
+
   // ---------- NARZĘDZIA ----------
   function $(id) { return document.getElementById(id); }
   function pokaz(id, tak) { $(id).hidden = !tak; }
@@ -823,7 +866,7 @@
     }
 
     if (PRACOWNICY_START) ustawPracownikow(PRACOWNICY_START);   // lista przyszła razem ze stroną – bez dodatkowego zapytania
-    else google.script.run.withSuccessHandler(ustawPracownikow).withFailureHandler(function () { ustawPracownikow([]); }).pobierzPracownikow();
+    else RUN.withSuccessHandler(ustawPracownikow).withFailureHandler(function () { ustawPracownikow([]); }).pobierzPracownikow();
 
     obszar = odczytaj('cmms_obszar');
     $('btnMotyw').addEventListener('click', przelaczMotyw);
@@ -951,7 +994,7 @@
 
   // ---------- STATYSTYKI (kafle w nagłówku) ----------
   function odswiezStatystyki() {
-    google.script.run
+    RUN
       .withSuccessHandler(function (s) {
         if (!s) return;
         $('k-rozl').textContent = s.rozliczoneDzis;
@@ -973,7 +1016,7 @@
     pokaz('btnInnaMaszyna', TRYB_MASZYNY);
     pokaz('btnWroc', !TRYB_MASZYNY);
     $('btnWroc').textContent = tryb === 'usterki' ? '← Wróć do usterek' : (tryb === 'rozliczone' ? '← Wróć do rozliczonych' : '← Wróć do listy');
-    $('pustyTytul').textContent = TRYB_MASZYNY ? 'Wczytywanie maszyny…' : 'Wybierz przegląd z listy';
+    $('pustyTytul').innerHTML = TRYB_MASZYNY ? '<span class="krec"></span>Wczytywanie maszyny…' : 'Wybierz przegląd z listy';
     pokaz('pustyOpis', !TRYB_MASZYNY);
     if (!MASZYNA && TRYB_MASZYNY) {
       // skan QR jeszcze się wczytuje albo się nie udał – zawsze jest wyjście do listy
@@ -1000,7 +1043,7 @@
     }
     ustawWidok();
     if (START_MASZYNY) { przyjmijMaszyne(START_MASZYNY); return; }   // dane przyszły razem ze stroną
-    google.script.run
+    RUN
       .withSuccessHandler(przyjmijMaszyne)
       .withFailureHandler(function (err) {
         komunikat('❌ Nie udało się wczytać maszyny: ' + err.message, 'k-bl', { etykieta: 'Pokaż listę przeglądów', fn: pokazWszystkieMaszyny }, true);
@@ -1101,8 +1144,8 @@
 
   // ---------- WIDOK „OTWARTE USTERKI” ----------
   function wczytajWszystkieUsterki() {
-    if (tryb === 'usterki') $('lista').innerHTML = '<div class="pusto">Wczytywanie usterek…</div>';
-    google.script.run
+    if (tryb === 'usterki') $('lista').innerHTML = ladowanie('Wczytywanie usterek…');
+    RUN
       .withSuccessHandler(function (lista) { USTERKI_WSZYSTKIE = lista || []; render(); })
       .withFailureHandler(function (err) { komunikat('❌ Nie udało się wczytać usterek: ' + err.message, 'k-bl'); })
       .pobierzOtwarteUsterki();
@@ -1118,7 +1161,7 @@
     var lista = usterkiWidoczne();
     $('listaTytul').textContent = 'Otwarte usterki' + (obszar ? ' · ' + obszar : '');
     $('listaLicznik').textContent = USTERKI_WSZYSTKIE === null ? '' : lista.length + ' szt.';
-    if (USTERKI_WSZYSTKIE === null) { $('lista').innerHTML = '<div class="pusto">Wczytywanie usterek…</div>'; return; }
+    if (USTERKI_WSZYSTKIE === null) { $('lista').innerHTML = ladowanie('Wczytywanie usterek…'); return; }
     $('lista').innerHTML = lista.length ? lista.map(function (u) {
       var wT = u.status === 'W trakcie';
       return '<button type="button" class="ust-poz' + (wT ? ' trakcie' : '') + (u.id === wybranaUsterka ? ' wybrany' : '') + '" data-id="' + esc(u.id) + '">' +
@@ -1133,7 +1176,7 @@
   }
   // ---------- WIDOK „ROZLICZONE DZIŚ” ----------
   function wczytajRozliczone() {
-    google.script.run
+    RUN
       .withSuccessHandler(function (lista) { ROZLICZONE = lista || []; $('k-rozl').textContent = ROZLICZONE.length; if (tryb === 'rozliczone') render(); })
       .withFailureHandler(function (err) { komunikat('❌ Nie udało się wczytać rozliczeń: ' + err.message, 'k-bl'); })
       .pobierzRozliczoneDzis();
@@ -1146,7 +1189,7 @@
     });
     $('listaTytul').textContent = 'Rozliczone dziś' + (obszar ? ' · ' + obszar : '');
     $('listaLicznik').textContent = ROZLICZONE === null ? '' : lista.length + ' szt.';
-    if (ROZLICZONE === null) { $('lista').innerHTML = '<div class="pusto">Wczytywanie…</div>'; return; }
+    if (ROZLICZONE === null) { $('lista').innerHTML = ladowanie(); return; }
     $('lista').innerHTML = lista.length ? lista.map(function (r, i) {
       return '<button type="button" class="ust-poz rozl-poz' + (r.nok ? '' : ' ok') + '" data-rozl="' + i + '">' +
         '<span class="gora"><span class="n">' + esc(r.nazwa) + '</span><span class="badge ' + (r.nok ? 'b-zal' : 'b-wyk') + '">' + (r.nok ? 'NOK' : 'OK') + '</span></span>' +
@@ -1199,7 +1242,7 @@
     MASZYNA = null;
     tryb = 'dozrobienia';
     ustawWidok();
-    $('lista').innerHTML = '<div class="pusto">Wczytywanie…</div>';
+    $('lista').innerHTML = ladowanie();
     odswiezListe();
     krok();
   }
@@ -1584,7 +1627,7 @@
     if (hasUsterka) pokaz('panelProblem', true); else $('przyciskiWynik').style.display = '';
     przyciskZapisu(hasUsterka, zapiszDTR, true);
 
-    google.script.run
+    RUN
       .withSuccessHandler(function (res) {
         blokujPrzyciski(false);
         pokaz('panelDtr', false);
@@ -1646,9 +1689,10 @@
 
   function odswiezListe() {
     $('btnOdswiez').disabled = true;
-    google.script.run
+    $('btnOdswiez').classList.add('kreci');
+    RUN
       .withSuccessHandler(function (dane) {
-        $('btnOdswiez').disabled = false;
+        $('btnOdswiez').disabled = false; $('btnOdswiez').classList.remove('kreci');
         BLAD = '';
         PRZEGLADY = rozpakuj(dane);
         if (USTERKI_WSZYSTKIE !== null) wczytajWszystkieUsterki();
@@ -1658,7 +1702,7 @@
         odswiezStatystyki();
       })
       .withFailureHandler(function (err) {
-        $('btnOdswiez').disabled = false;
+        $('btnOdswiez').disabled = false; $('btnOdswiez').classList.remove('kreci');
         komunikat('❌ Nie udało się odświeżyć listy: ' + err.message, 'k-bl', { etykieta: 'Spróbuj ponownie', fn: odswiezListe }, true);
         if (!PRZEGLADY.length) $('lista').innerHTML = '<div class="pusto">Brak połączenia z arkuszem.<br><button type="button" class="link" onclick="odswiezListe()">↻ Spróbuj ponownie</button></div>';
       })
@@ -1728,9 +1772,9 @@
     }
     var nr = ++zapytanieHistorii;
     var idUrz = MASZYNA.id;
-    $('listaUsterek').innerHTML = '<div class="pusto">Wczytywanie…</div>';
+    $('listaUsterek').innerHTML = ladowanie();
     $('listaHistorii').innerHTML = '';
-    google.script.run
+    RUN
       .withSuccessHandler(function (res) {
         if (nr !== zapytanieHistorii) return;   // w międzyczasie wybrano inną maszynę
         USTERKI = (res && res.otwarte) || [];
@@ -1797,11 +1841,12 @@
     var opis = ($('op-' + i) || {}).value || '';
     if (!osoba.trim()) { komunikat('Wybierz, kto obsługuje usterkę.', 'k-bl'); return; }
     if (akcja === 'usunieta' && !opis.trim()) { komunikat('Opisz, co zostało zrobione.', 'k-bl'); $('op-' + i).focus(); return; }
-    btn.disabled = true;
     pamietaj('cmms_wykonawca', osoba.trim());
-    google.script.run
+    var przywroc = przyciskPracuje(btn, akcja === 'usunieta' ? 'Zamykanie…' : 'Zapisywanie…');
+    box.classList.add('zapisuje');
+    RUN
       .withSuccessHandler(function (res) {
-        btn.disabled = false;
+        przywroc(); box.classList.remove('zapisuje');
         if (!res || !res.success) { komunikat('❌ ' + ((res && res.message) || 'Nie zapisano.'), 'k-bl'); return; }
         komunikat('✅ ' + res.message, 'k-ok');
         if (MASZYNA && MASZYNA.bezKarty) {
@@ -1811,7 +1856,7 @@
         odswiezStatystyki();
         if (USTERKI_WSZYSTKIE !== null) wczytajWszystkieUsterki();
       })
-      .withFailureHandler(function (err) { btn.disabled = false; komunikat('❌ Błąd: ' + err.message, 'k-bl'); })
+      .withFailureHandler(function (err) { przywroc(); box.classList.remove('zapisuje'); komunikat('❌ Nie zapisano (brak zasięgu?): ' + err.message, 'k-bl'); })
       .zmienStatusUsterki({ idUsterki: id, akcja: akcja, osoba: osoba.trim(), opisNaprawy: opis.trim() });
   }
 
@@ -1834,13 +1879,10 @@
     if (bledy.length) { komunikat('Uzupełnij: ' + bledy.join(', ') + '.', 'k-bl'); return; }
 
     pamietaj('cmms_wykonawca', kto);
-    var btn = $('btnAwaria');
-    btn.disabled = true;
-    btn.textContent = 'Wysyłanie…';
-    google.script.run
+    var przywroc = przyciskPracuje($('btnAwaria'), 'Wysyłanie zgłoszenia…');
+    RUN
       .withSuccessHandler(function (res) {
-        btn.disabled = false;
-        btn.textContent = '🚨 Wyślij zgłoszenie awarii';
+        przywroc();
         if (!res || !res.success) { komunikat('❌ ' + ((res && res.message) || 'Nie wysłano.'), 'k-bl'); return; }
         komunikat('✅ ' + res.message + (maszynaStoi ? ' Kierownik dostał informację, że maszyna stoi.' : ''), 'k-ok');
         $('opisAwarii').value = ''; $('czesciAwarii').value = '';
@@ -1849,9 +1891,8 @@
         odswiezStatystyki();
       })
       .withFailureHandler(function (err) {
-        btn.disabled = false;
-        btn.textContent = '🚨 Wyślij zgłoszenie awarii';
-        komunikat('❌ Błąd: ' + err.message, 'k-bl');
+        przywroc();
+        komunikat('❌ Nie wysłano (brak zasięgu?): ' + err.message, 'k-bl');
       })
       .zglosAwarie({
         idUrzadzenia: MASZYNA.id,
