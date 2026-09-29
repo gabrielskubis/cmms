@@ -15,9 +15,10 @@ i plany dla obu filarów.
 | [`docs/04-cmms-sciezka-docelowa.md`](docs/04-cmms-sciezka-docelowa.md) | Decyzja „komercyjny vs autorski”, architektura docelowa, moduły AI |
 | [`docs/05-wms-plan.md`](docs/05-wms-plan.md) | Filar II: metoda pomiaru dokładności 98%, pomiar skrócenia czasu o 15%, dokumentacja przedwdrożeniowa |
 | [`docs/06-otwarte-pytania.md`](docs/06-otwarte-pytania.md) | Punkty do doprecyzowania ze zleceniodawcą |
-| `src/` | Kod CMMS V4.1 (Apps Script + szablony HTML) — **stan bazowy, bez zmian** |
+| [`docs/07-usprawnienia.md`](docs/07-usprawnienia.md) | Nowy interfejs przeglądu (telefon + laptop), instrukcja wdrożenia, lista kolejnych usprawnień |
+| `src/` | Kod CMMS (Apps Script + szablony HTML) — aktualna wersja do wklejenia w Apps Script |
 
-## Kod `src/` — stan bazowy
+## Kod `src/`
 
 | Plik | Rola |
 |---|---|
@@ -26,9 +27,21 @@ i plany dla obu filarów.
 | `src/FormularzPrzegladu.html` | Okno rozliczenia otwierane z arkusza Google |
 | `src/PanelZarzadu.html` | Panel zarządu (`?panel=zarzad`, tryb demo `&demo=1`) |
 
-Pliki zostały wydzielone z jednego zrzutu tekstowego bez zmian w treści (normalizacja końców
-linii do LF). Każda poprawka kodu powinna iść osobnym commitem, żeby było widać różnicę względem
-wersji produkcyjnej.
+Pierwszy commit (`Dodaj kod CMMS Kraków V4.1…`) to wersja produkcyjna 1:1; kolejne zmiany idą
+osobnymi commitami, więc różnicę względem produkcji widać w historii.
+
+### Kopiowanie do Apps Script (bez narzędzi)
+
+Otwórz link, zaznacz wszystko (Ctrl+A), skopiuj i wklej w miejsce całej treści pliku o tej samej
+nazwie w edytorze Apps Script, zapisz (Ctrl+S). Po zmianach w plikach HTML lub funkcjach Web App:
+**Deploy → Manage deployments → ✏️ → Version: New version → Deploy**.
+
+| Plik | Link (Raw) |
+|---|---|
+| Code.gs | https://github.com/gabrielskubis/cmms/raw/claude/cmms-wms-digitalization-uanvfq/src/Code.gs |
+| FormularzMobile.html | https://github.com/gabrielskubis/cmms/raw/claude/cmms-wms-digitalization-uanvfq/src/FormularzMobile.html |
+| FormularzPrzegladu.html | https://github.com/gabrielskubis/cmms/raw/claude/cmms-wms-digitalization-uanvfq/src/FormularzPrzegladu.html |
+| PanelZarzadu.html | https://github.com/gabrielskubis/cmms/raw/claude/cmms-wms-digitalization-uanvfq/src/PanelZarzadu.html |
 
 ### Synchronizacja z projektem Apps Script
 
