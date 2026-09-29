@@ -239,35 +239,54 @@ function doGet(e) {
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('⚙️ CMMS System')
-    .addItem('📝 Otwórz formularz rozliczenia', 'pokazFormularzPrzegladu')
-    .addItem('🖥️ Otwórz aplikację przeglądów (pełny ekran)', 'otworzAplikacjePrzegladow')
-    .addItem('📍 Przejdź do dzisiejszych przeglądów', 'przejdzDoDzisiaj')
-    .addItem('📊 Utwórz / Odśwież Dashboard CMMS', 'utworzDashboardCMMS')
-    .addItem('🎨 Pełne Uporządkowanie i Formatowanie Arkuszy', 'przygotujSrodowiskoCMMS')
+    .addItem('🏠 Start', 'przejdzDoStartu')
+    .addItem('📅 Dziś i zaległe', 'przejdzDoWidokuDzis')
+    .addItem('🖥️ Otwórz aplikację przeglądów', 'otworzAplikacjePrzegladow')
+    .addItem('📝 Rozlicz przegląd w arkuszu', 'pokazFormularzPrzegladu')
     .addSeparator()
-    .addSubMenu(ui.createMenu('🏗️ Urządzenia i harmonogram')
-      .addItem('🏗️ Zaktualizuj Kartę Urządzeń (Kraków 110 maszyn)', 'aktualizujKarteUrzadzenKrakow')
-      .addItem('📅 Wygeneruj Harmonogram 2026 (18.09 - 31.12.2026)', 'generujHarmonogram2026')
-      .addItem('🔄 Pełna Aktualizacja CMMS Kraków (Urządzenia + Harmonogram)', 'aktualizujCMMSKrakowFull')
+    .addItem('🎨 Odśwież wygląd arkusza', 'nowyWygladArkusza')
+    .addItem('📊 Odśwież Dashboard (wykresy)', 'utworzDashboardCMMS')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🏭 Urządzenia i kody QR')
+      .addItem('📷 Wygeneruj kody QR w karcie urządzeń', 'wygenerujKodyQRMaszyn')
+      .addItem('🔍 Pokaż duży kod QR zaznaczonej maszyny', 'pokazKodQRMaszyny')
+      .addItem('🖨️ Utwórz etykiety QR do druku', 'utworzEtykietyQR')
+      .addSeparator()
+      .addItem('🏗️ Zaktualizuj kartę urządzeń (Kraków 110 maszyn)', 'aktualizujKarteUrzadzenKrakow'))
+    .addSubMenu(ui.createMenu('🗓️ Harmonogram')
+      .addItem('📍 Przejdź do dzisiejszych przeglądów', 'przejdzDoDzisiaj')
+      .addItem('📅 Wygeneruj harmonogram 2026 (18.09 – 31.12.2026)', 'generujHarmonogram2026')
       .addItem('🗓️ Rozbij harmonogram na arkusze miesięczne', 'generujArkuszeMiesieczne')
-      .addItem('📷 Wygeneruj Kody QR dla Urządzeń', 'wygenerujKodyQRMaszyn').addItem('🔍 Pokaż duży kod QR zaznaczonej maszyny', 'pokazKodQRMaszyny').addItem('🖨️ Utwórz etykiety QR do druku', 'utworzEtykietyQR').addItem('📅 Terminy UDT i kalibracji', 'utworzArkuszTerminow').addItem('⏰ Włącz przypomnienia o terminach', 'instalujPrzypomnieniaTerminow').addItem('📊 Pokaż link do Panelu Zarządu', 'pokazLinkPaneluZarzadu').addSeparator().addItem('🧪 Przygotuj plik pilotażowy (tylko w kopii!)', 'przygotujPilotaz'))
+      .addItem('🔄 Pełna aktualizacja (urządzenia + harmonogram)', 'aktualizujCMMSKrakowFull'))
+    .addSubMenu(ui.createMenu('👷 Ludzie, terminy, zarząd')
+      .addItem('👷 Lista pracowników (utwórz / uporządkuj)', 'utworzArkuszPracownikow')
+      .addItem('📅 Terminy UDT i kalibracji', 'utworzArkuszTerminow')
+      .addItem('⏰ Włącz przypomnienia o terminach', 'instalujPrzypomnieniaTerminow')
+      .addItem('📈 Link do Panelu Zarządu', 'pokazLinkPaneluZarzadu'))
     .addSubMenu(ui.createMenu('📋 Formularz Google')
-      .addItem('🔄 Zaktualizuj Opcje w Istniejącym Formularzu', 'aktualizujFormularzGoogle')
-      .addItem('📥 Przetwórz zaległe odpowiedzi z Formularza', 'przetworzZalegleOdpowiedziFormularza')
+      .addItem('🔄 Zaktualizuj opcje w formularzu', 'aktualizujFormularzGoogle')
+      .addItem('📥 Przetwórz zaległe odpowiedzi', 'przetworzZalegleOdpowiedziFormularza')
       .addItem('⏰ Zainstaluj automatyczne wyzwalacze', 'instalujWyzwalacze')
       .addSeparator()
-      .addItem('➕ Wygeneruj Nowy Formularz Google', 'stworzFormularzGoogle'))
+      .addItem('➕ Wygeneruj nowy formularz', 'stworzFormularzGoogle'))
     .addSubMenu(ui.createMenu('🛠️ Serwis i naprawa danych')
-      .addItem('🧪 Diagnostyka danych CMMS (raport)', 'diagnostykaDanychCMMS')
+      .addItem('🧪 Diagnostyka danych (raport)', 'diagnostykaDanychCMMS')
       .addItem('⚡ Wyczyść pamięć podręczną aplikacji', 'wyczyscPamiecAplikacji')
       .addSeparator()
       .addItem('🔧 Napraw format ID urządzeń (1.10 ≠ 1.1)', 'naprawFormatIdUrzadzen')
-      .addItem('🔁 Migruj stare ID przeglądów (naprawa historii)', 'migrujStareIdPrzegladow')
+      .addItem('🔁 Migruj stare ID przeglądów', 'migrujStareIdPrzegladow')
       .addItem('🔗 Napraw ID urządzeń w Usterkach', 'naprawUsterkiIdUrzadzen')
       .addItem('🛠️ Napraw i wyrównaj Rejestr Przeglądów', 'naprawStruktureRejestruPrzegladow')
-      .addItem('🛠️ Ujednolić i sformatuj harmonogramy (Rozdziel Kolumny)', 'naprawStruktureWszystkichHarmonogramow')
-      .addItem('🚨 Sformatuj arkusz Usterek', 'formatujArkuszUsterek').addItem('👷 Utwórz / uporządkuj listę pracowników', 'utworzArkuszPracownikow'))
+      .addItem('🛠️ Ujednolić harmonogramy (rozdziel kolumny)', 'naprawStruktureWszystkichHarmonogramow')
+      .addItem('🎨 Pełne uporządkowanie (stara wersja)', 'przygotujSrodowiskoCMMS')
+      .addSeparator()
+      .addItem('🧪 Przygotuj plik pilotażowy (tylko w kopii!)', 'przygotujPilotaz'))
     .addToUi();
+  // plik otwiera się na zakładce Start (jeśli istnieje)
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet(), start = ss.getSheetByName(ARKUSZ_START);
+    if (start) ss.setActiveSheet(start);
+  } catch (e) {}
 }
 
 /**
@@ -723,7 +742,7 @@ function generujArkuszeMiesieczne__zapis(spreadsheetObj) {
 /**
  * ELEGANCKIE I INTUICYJNE FORMATOWANIE ARKUSZY HARMONOGRAMÓW
  */
-function formatujArkuszHarmonogramu(sheet) {
+function formatujArkuszHarmonogramuV4_(sheet) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 1) return;
 
@@ -2477,7 +2496,7 @@ function kafelekDashboard_(dash, wiersz, kolumna, etykieta, formula, format, kol
 /**
  * Formatowanie karty urządzeń (bez kasowania danych).
  */
-function formatujArkuszUrzadzen_(sheet) {
+function formatujArkuszUrzadzenV4_(sheet) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 1) return;
   if (sheet.getFilter()) sheet.getFilter().remove();
@@ -2529,7 +2548,7 @@ function formatujArkuszUrzadzen_(sheet) {
  * Formatowanie arkusza "4. Usterki i Awarie" - wcześniej nie miał żadnego formatowania.
  * Zakresy otwarte (np. "I2:I") obejmują też usterki dopisane w przyszłości.
  */
-function formatujArkuszUsterek(sheet) {
+function formatujArkuszUsterekV4_(sheet) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!sheet || typeof sheet.getName !== "function") {
     sheet = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
@@ -2812,6 +2831,7 @@ function uporzadkujZakladki_() {
   var kod = pobierzKodAktualnegoMiesiaca();
   var aktywny = ss.getActiveSheet();
 
+  if (typeof porzadekZakladek_ === "function" && ss.getSheetByName(ARKUSZ_START)) { porzadekZakladek_(false); return; }
   var kolejnosc = ["0. Dashboard CMMS", "Harmonogram - " + kod, "1. Urządzenia", "2. Harmonogram",
                    "3. Rejestr Przeglądów", "4. Usterki i Awarie", "4. Usterki i Awaria"];
   var kolory = {
@@ -4768,4 +4788,555 @@ function naprawUsterkiIdUrzadzen() {
 }
 function naprawStruktureWszystkichHarmonogramow() {
   try { return naprawStruktureWszystkichHarmonogramow__zapis.apply(this, arguments); } finally { wyczyscCache_(); }
+}
+
+/* ==========================================================================
+ *  WYGLĄD ARKUSZA V5 - Start, Dziś, jeden styl wszystkich zakładek, porządek, ochrona
+ *  Zmienia wyłącznie wygląd, układ i widoki. Dane, nazwy zakładek i kolumny
+ *  (z których korzysta aplikacja) zostają bez zmian.
+ * ========================================================================== */
+
+var ARKUSZ_START = "🏠 Start";
+var ARKUSZ_DZIS = "📅 Dziś";
+var CZCIONKA = "Roboto";
+var PALETA = {
+  granat: "#0f172a", tekst: "#0f172a", szary: "#64748b", jasny: "#f8fafc", linia: "#e5e7eb", tlo: "#f1f5f9",
+  start: "#0f172a", dzis: "#1d4ed8", urzadzenia: "#334155", harmonogram: "#1e40af", rejestr: "#6d28d9",
+  usterki: "#b91c1c", terminy: "#b45309", pracownicy: "#0f766e", dashboard: "#0f172a",
+  czerwony: "#dc2626", czerwonyTlo: "#fee2e2", zolty: "#b45309", zoltyTlo: "#fef3c7",
+  zielony: "#047857", zielonyTlo: "#d1fae5", niebieski: "#1d4ed8", niebieskiTlo: "#dbeafe"
+};
+
+/** Menu: 🎨 Odśwież wygląd arkusza */
+function nowyWygladArkusza() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast("Odświeżam wygląd arkusza… (do 1–2 minut)", "🎨 CMMS", 20);
+  var bledy = [];
+  function krokW(nazwa, fn) { try { fn(); } catch (e) { bledy.push(nazwa + ": " + e.message); Logger.log(nazwa + ": " + e.stack); } }
+
+  krokW("Start", zbudujStart_);
+  krokW("Dziś", zbudujDzis_);
+  ss.getSheets().forEach(function (sh) {
+    var n = sh.getName();
+    if (czyArkuszHarmonogramu_(n)) krokW(n, function () { formatujArkuszHarmonogramu(sh); });
+  });
+  var urz = ss.getSheetByName("1. Urządzenia");
+  if (urz) krokW("Urządzenia", function () { formatujArkuszUrzadzen_(urz); });
+  krokW("Usterki", function () { formatujArkuszUsterek(); });
+  krokW("Rejestr", stylRejestru_);
+  krokW("Terminy", function () { var t = ss.getSheetByName(ARKUSZ_TERMINY); if (t) stylOgolny_(t, PALETA.terminy, { zamrozKolumny: 3 }); });
+  krokW("Pracownicy", function () { var t = ss.getSheetByName(ARKUSZ_PRACOWNICY); if (t) stylOgolny_(t, PALETA.pracownicy, { zamrozKolumny: 1 }); });
+  krokW("Dashboard", function () { var t = ss.getSheetByName("0. Dashboard CMMS"); if (t) t.setHiddenGridlines(true); });
+  krokW("Kolejność zakładek", function () { porzadekZakladek_(true); });
+  krokW("Ochrona", ustawOchrone_);
+
+  var start = ss.getSheetByName(ARKUSZ_START);
+  if (start) ss.setActiveSheet(start);
+  if (bledy.length) SpreadsheetApp.getUi().alert("🎨 Wygląd odświeżony, ale kilka kroków się nie udało:\n\n• " + bledy.join("\n• "));
+  else ss.toast("Gotowe – nowy wygląd arkusza.", "🎨 CMMS", 6);
+}
+
+function przejdzDoStartu() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(ARKUSZ_START);
+  if (!sh) { zbudujStart_(); sh = ss.getSheetByName(ARKUSZ_START); porzadekZakladek_(false); }
+  ss.setActiveSheet(sh);
+}
+function przejdzDoWidokuDzis() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(ARKUSZ_DZIS);
+  if (!sh) { zbudujDzis_(); sh = ss.getSheetByName(ARKUSZ_DZIS); porzadekZakladek_(false); }
+  ss.setActiveSheet(sh);
+}
+
+/* ---------- pomocnicze do formuł ---------- */
+
+function refArkusza_(nazwa) { return "'" + String(nazwa).replace(/'/g, "''") + "'!"; }
+function nazwaArkuszaUsterek_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName("4. Usterki i Awarie") ? "4. Usterki i Awarie" : (ss.getSheetByName("4. Usterki i Awaria") ? "4. Usterki i Awaria" : "4. Usterki i Awarie");
+}
+/** Data z komórki, która może być datą albo tekstem "rrrr-mm-dd ..." (jak zapisuje aplikacja). 0 gdy pusta. */
+function fData_(ref) { return 'IFERROR(INT(IFERROR(DATEVALUE(LEFT(' + ref + '&"",10)),' + ref + ')),0)'; }
+function linkDoArkusza_(nazwa) {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nazwa);
+  return sh ? "#gid=" + sh.getSheetId() : "";
+}
+function hiperlacze_(url, tekst) { return '=HYPERLINK("' + url + '","' + String(tekst).replace(/"/g, '""') + '")'; }
+
+/** Przygotowuje pusty arkusz-widok o zadanym rozmiarze (tworzy albo czyści). */
+function arkuszWidoku_(nazwa, kolumny, wiersze) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(nazwa) || ss.insertSheet(nazwa, 0);
+  sh.getProtections(SpreadsheetApp.ProtectionType.SHEET).forEach(function (p) { if (String(p.getDescription()).indexOf("CMMS:") === 0) p.remove(); });
+  if (sh.getFilter()) sh.getFilter().remove();
+  sh.getBandings().forEach(function (b) { b.remove(); });
+  sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).breakApart();
+  sh.clear();
+  sh.clearConditionalFormatRules();
+  sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).clearDataValidations().clearNote();
+  if (sh.getMaxColumns() < kolumny) sh.insertColumnsAfter(sh.getMaxColumns(), kolumny - sh.getMaxColumns());
+  if (sh.getMaxColumns() > kolumny) sh.deleteColumns(kolumny + 1, sh.getMaxColumns() - kolumny);
+  if (sh.getMaxRows() < wiersze) sh.insertRowsAfter(sh.getMaxRows(), wiersze - sh.getMaxRows());
+  if (sh.getMaxRows() > wiersze) sh.deleteRows(wiersze + 1, sh.getMaxRows() - wiersze);
+  sh.setFrozenRows(0); sh.setFrozenColumns(0);
+  sh.setHiddenGridlines(true);
+  sh.getRange(1, 1, wiersze, kolumny).setFontFamily(CZCIONKA).setFontColor(PALETA.tekst).setVerticalAlignment("middle");
+  return sh;
+}
+
+/* ==========================================================================
+ *  🏠 START - strona główna pliku
+ * ========================================================================== */
+function zbudujStart_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var KOL = 11, WIER = 34;
+  var sh = arkuszWidoku_(ARKUSZ_START, KOL, WIER);
+  if (!ss.getSheetByName(ARKUSZ_DZIS)) zbudujDzis_();
+
+  var H = refArkusza_("2. Harmonogram"), R = refArkusza_("3. Rejestr Przeglądów"), U = refArkusza_(nazwaArkuszaUsterek_());
+  var dG = fData_(H + "G2:G");
+
+  // siatka: marginesy, 5 kafli, odstępy
+  [16, 172, 12, 172, 12, 172, 12, 172, 12, 172, 16].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+  sh.setRowHeights(1, WIER, 22);
+  sh.getRange(1, 1, WIER, KOL).setBackground(PALETA.tlo);
+
+  // nagłówek
+  sh.setRowHeight(1, 14);
+  sh.getRange("B2:J2").merge().setValue("📋  CMMS · Utrzymanie Ruchu — Kraków Nowa Huta")
+    .setFontSize(20).setFontWeight("bold").setFontColor(PALETA.granat);
+  sh.setRowHeight(2, 42);
+  sh.getRange("B3:J3").merge().setFormula('="Stan na " & TEXT(NOW(),"dddd, dd.mm.yyyy") & ", godz. " & TEXT(NOW(),"HH:mm") & "   ·   liczby liczą się same przy każdej zmianie w arkuszu"')
+    .setFontSize(10).setFontColor(PALETA.szary);
+  sh.setRowHeight(4, 14);
+
+  // KAFLE
+  var dzis = linkDoArkusza_(ARKUSZ_DZIS), ust = linkDoArkusza_(nazwaArkuszaUsterek_()), rej = linkDoArkusza_("3. Rejestr Przeglądów");
+  var zalegle = 'SUMPRODUCT((' + H + 'A2:A<>"")*(' + H + 'I2:I<>"Wykonany")*(' + dG + '>0)*(' + dG + '<TODAY()))';
+  var planDzis = 'SUMPRODUCT((' + H + 'A2:A<>"")*(' + dG + '=TODAY()))';
+  var wykDzis = 'SUMPRODUCT((' + H + 'A2:A<>"")*(' + dG + '=TODAY())*(' + H + 'I2:I="Wykonany"))';
+  var rozlDzis = 'SUMPRODUCT(--(' + fData_(R + "F2:F") + '=TODAY()))';
+  var otwarte = 'SUMPRODUCT((' + U + 'A2:A<>"")*(' + U + 'I2:I<>"Usunięta"))';
+  var wysokie = 'SUMPRODUCT((' + U + 'A2:A<>"")*(' + U + 'I2:I<>"Usunięta")*(' + U + 'G2:G="Wysoki"))';
+  var stoja = 'COUNTIFS(' + U + 'N2:N,"TAK",' + U + 'I2:I,"<>Usunięta")';
+  var kafle = [
+    { kol: 2, et: "ZALEGŁE PRZEGLĄDY", f: zalegle, pod: '="po terminie, niewykonane"', kolor: PALETA.czerwony, tlo: "#fff1f2", link: dzis },
+    { kol: 4, et: "NA DZIŚ DO ZROBIENIA", f: planDzis + "-" + wykDzis, pod: '="wykonano " & ' + wykDzis + ' & " z " & ' + planDzis, kolor: PALETA.zolty, tlo: "#fffbeb", link: dzis },
+    { kol: 6, et: "ROZLICZONE DZIŚ", f: rozlDzis, pod: '="wpisy w Rejestrze"', kolor: PALETA.zielony, tlo: "#ecfdf5", link: rej },
+    { kol: 8, et: "OTWARTE USTERKI", f: otwarte, pod: '="w tym priorytet Wysoki: " & ' + wysokie, kolor: "#c2410c", tlo: "#fff7ed", link: ust },
+    { kol: 10, et: "MASZYNY STOJĄ", f: stoja, pod: '=IF(' + stoja + '=0,"wszystkie pracują ✓","zgłoszone jako „stoi”")', kolor: PALETA.czerwony, tlo: "#fef2f2", link: ust }
+  ];
+  sh.setRowHeight(5, 26); sh.setRowHeight(6, 52); sh.setRowHeight(7, 26);
+  kafle.forEach(function (k) {
+    var blok = sh.getRange(5, k.kol, 3, 1);
+    blok.setBackground(k.tlo).setHorizontalAlignment("left")
+      .setBorder(true, true, true, true, null, null, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
+    sh.getRange(5, k.kol).setValue("  " + k.et).setFontSize(8).setFontWeight("bold").setFontColor(PALETA.szary).setVerticalAlignment("bottom");
+    sh.getRange(6, k.kol).setFormula('=HYPERLINK("' + k.link + '","  "&' + k.f + ')')
+      .setFontSize(30).setFontWeight("bold").setFontColor(k.kolor).setVerticalAlignment("middle");
+    sh.getRange(7, k.kol).setFormula(k.pod.replace(/^=/, '="  "&')).setFontSize(9).setFontColor(PALETA.szary).setVerticalAlignment("top");
+  });
+  // pasek koloru pod kaflem
+  sh.setRowHeight(8, 5);
+  kafle.forEach(function (k) { sh.getRange(8, k.kol).setBackground(k.kolor); });
+  sh.setRowHeight(9, 22);
+
+  // PRZEJDŹ DO
+  sh.getRange("B10:J10").merge().setValue("PRZEJDŹ DO").setFontSize(9).setFontWeight("bold").setFontColor(PALETA.szary);
+  var url = "";
+  try { url = PropertiesService.getScriptProperties().getProperty("CMMS_URL_APLIKACJI") || ""; } catch (e) {}
+  var przyciski = [
+    [ [ARKUSZ_DZIS, "📅  Dziś i zaległe", PALETA.dzis], [nazwaArkuszaUsterek_(), "🔧  Usterki i awarie", PALETA.usterki],
+      ["2. Harmonogram", "🗓️  Harmonogram", PALETA.harmonogram], ["3. Rejestr Przeglądów", "📘  Rejestr przeglądów", PALETA.rejestr],
+      ["1. Urządzenia", "🏭  Urządzenia (110)", PALETA.urzadzenia] ],
+    [ ["0. Dashboard CMMS", "📊  Dashboard i wykresy", PALETA.dashboard], [ARKUSZ_TERMINY, "⏱️  Terminy UDT", PALETA.terminy],
+      [ARKUSZ_PRACOWNICY, "👷  Pracownicy", PALETA.pracownicy], ["@app", "📱  Aplikacja przeglądów", "#2563eb"], ["@panel", "📈  Panel Zarządu", "#2563eb"] ]
+  ];
+  [11, 13].forEach(function (wiersz, r) {
+    sh.setRowHeight(wiersz, 40);
+    przyciski[r].forEach(function (b, i) {
+      var c = sh.getRange(wiersz, 2 + i * 2), cel = "";
+      if (b[0] === "@app") cel = url; else if (b[0] === "@panel") cel = url ? url + "?panel=zarzad" : "";
+      else cel = linkDoArkusza_(b[0]);
+      if (cel) c.setFormula(hiperlacze_(cel, b[1])).setBackground(b[2]).setFontColor("#ffffff");
+      else c.setValue(b[1] + (b[0].charAt(0) === "@" ? " (ustaw adres)" : " (brak)")).setBackground("#cbd5e1").setFontColor("#475569");
+      c.setFontSize(10).setFontWeight("bold").setHorizontalAlignment("center");
+    });
+  });
+  sh.setRowHeight(12, 8);
+  sh.setRowHeight(14, 22);
+
+  // REALIZACJA WG OBSZARU (30 dni)
+  sh.getRange("B15:J15").merge().setValue("REALIZACJA PLANU WG OBSZARU — ostatnie 30 dni").setFontSize(9).setFontWeight("bold").setFontColor(PALETA.szary);
+  sh.getRange(16, 2, 1, 9).setValues([["Obszar", "", "Zaplanowane", "", "Wykonane", "", "Realizacja", "", "Postęp"]])
+    .setFontSize(9).setFontWeight("bold").setFontColor(PALETA.szary).setBackground("#e2e8f0");
+  var obszary = [];
+  var urz = ss.getSheetByName("1. Urządzenia");
+  if (urz && urz.getLastRow() > 1) urz.getRange(2, 2, urz.getLastRow() - 1, 1).getDisplayValues().forEach(function (r) {
+    var o = String(r[0]).trim(); if (o && obszary.indexOf(o) < 0) obszary.push(o);
+  });
+  obszary.slice(0, 10).forEach(function (o, i) {
+    var w = 17 + i;
+    var okno = '(' + H + 'C2:C=$B' + w + ')*(' + dG + '<=TODAY())*(' + dG + '>TODAY()-30)';
+    sh.getRange(w, 2).setValue(o).setFontWeight("bold");
+    sh.getRange(w, 1).setBackground(kolorObszaruMocny_(o));
+    sh.getRange(w, 4).setFormula('=SUMPRODUCT(' + okno + ')').setHorizontalAlignment("center");
+    sh.getRange(w, 6).setFormula('=SUMPRODUCT(' + okno + '*(' + H + 'I2:I="Wykonany"))').setHorizontalAlignment("center");
+    sh.getRange(w, 8).setFormula('=IF(D' + w + '=0,"–",F' + w + '/D' + w + ')').setNumberFormat("0%").setHorizontalAlignment("center").setFontWeight("bold");
+    sh.getRange(w, 10).setFormula('=IF(D' + w + '=0,"",SPARKLINE(F' + w + '/D' + w + ',{"charttype","bar";"max",1;"color1",IF(F' + w + '/D' + w + '>=0.8,"#10b981",IF(F' + w + '/D' + w + '>=0.5,"#f59e0b","#ef4444"));"color2","#e2e8f0"}))');
+    sh.getRange(w, 2, 1, 9).setBackground("#ffffff").setBorder(null, null, true, null, null, null, PALETA.linia, SpreadsheetApp.BorderStyle.SOLID);
+  });
+  var poObszarach = 17 + Math.min(obszary.length, 10);
+  var rOb = sh.getRange(17, 8, Math.max(1, poObszarach - 17), 1);
+  sh.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule().whenNumberGreaterThanOrEqualTo(0.8).setFontColor(PALETA.zielony).setRanges([rOb]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenNumberBetween(0.5, 0.7999).setFontColor(PALETA.zolty).setRanges([rOb]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenNumberLessThan(0.5).setFontColor(PALETA.czerwony).setRanges([rOb]).build()
+  ]);
+
+  // JAK TO DZIAŁA
+  var wI = poObszarach + 1;
+  sh.getRange(wI, 2, 1, 9).merge().setValue("JAK TO DZIAŁA").setFontSize(9).setFontWeight("bold").setFontColor(PALETA.szary);
+  var instr = [
+    "📱  Technik rozlicza przegląd i zgłasza awarię w aplikacji na telefonie — skan kodu QR na maszynie albo link z przycisku „Aplikacja przeglądów”.",
+    "📅  Kierownik zaczyna dzień od zakładki „Dziś”: przeglądy na dziś, zaległe i otwarte usterki — wszystko liczy się samo.",
+    "🔧  Usterki obsługuje się w aplikacji (W trakcie / Usunięta). Czas przestoju liczy się sam, gdy maszyna stała.",
+    "✏️  Kolumny z ID i datami są chronione ostrzeżeniem — zmiany planu rób przez menu ⚙️ CMMS System, nie ręcznie."
+  ];
+  instr.forEach(function (t, i) {
+    sh.getRange(wI + 1 + i, 2, 1, 9).merge().setValue(t).setFontSize(10).setFontColor("#334155").setWrap(true);
+    sh.setRowHeight(wI + 1 + i, 26);
+  });
+  sh.getRange(1, 1, WIER, KOL).setFontFamily(CZCIONKA);
+  sh.setTabColor(PALETA.start);
+}
+
+/** Mocniejsza wersja koloru obszaru (pasek przy nazwie). */
+function kolorObszaruMocny_(o) {
+  var m = { "Suche Mieszanki": "#3b82f6", "Suszarnia Piachu": "#f59e0b", "MIXER HRB": "#8b5cf6",
+            "Kompresory": "#10b981", "Sprężone Powietrze": "#06b6d4", "Rozdzielnie El.": "#ef4444" };
+  return m[o] || "#94a3b8";
+}
+
+/* ==========================================================================
+ *  📅 DZIŚ - widok roboczy (formuły na żywo)
+ * ========================================================================== */
+function zbudujDzis_() {
+  var KOL = 22, WIER = 600;
+  var sh = arkuszWidoku_(ARKUSZ_DZIS, KOL, WIER);
+  var H = refArkusza_("2. Harmonogram"), U = refArkusza_(nazwaArkuszaUsterek_());
+  var dG = fData_(H + "G2:G"), dU = fData_(U + "B2:B");
+
+  // A | B-F dziś | G | H-M zaległe | N | O-U usterki | V
+  [12, 60, 220, 120, 90, 90, 16, 60, 200, 110, 80, 70, 60, 16, 190, 55, 260, 75, 95, 60, 55, 12]
+    .forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+
+  sh.getRange("B1:U1").merge().setFormula('="📅  Dziś · " & TEXT(TODAY(),"dddd, dd.mm.yyyy")')
+    .setFontSize(18).setFontWeight("bold").setFontColor(PALETA.granat);
+  sh.setRowHeight(1, 44);
+  sh.getRange("B2:U2").merge().setValue("Widok liczy się sam z Harmonogramu i Usterek. Rozliczenia i obsługa usterek — w aplikacji. Kliknij nagłówek sekcji, żeby przejść do pełnej zakładki.")
+    .setFontSize(9).setFontColor(PALETA.szary);
+  sh.setRowHeight(3, 10);
+
+  var sekcje = [
+    { od: 2, szer: 5, kolor: "#b45309", tlo: "#fffbeb", cel: "2. Harmonogram",
+      tytul: '="🟡  NA DZIŚ DO ZROBIENIA  (" & SUMPRODUCT((' + H + 'A2:A<>"")*(' + H + 'I2:I<>"Wykonany")*(' + dG + '=TODAY())) & ")"',
+      nagl: ["ID", "Maszyna", "Obszar", "Częstotliwość", "Wykonawca"],
+      f: '=IFERROR(ARRAYFORMULA(SORT(FILTER({' + H + 'B2:B,' + H + 'D2:D,' + H + 'C2:C,' + H + 'E2:E,' + H + 'H2:H},' +
+         H + 'A2:A<>"",' + H + 'I2:I<>"Wykonany",' + dG + '=TODAY()),3,TRUE,2,TRUE)),"✅ Wszystko na dziś zrobione")' },
+    { od: 8, szer: 6, kolor: PALETA.czerwony, tlo: "#fff1f2", cel: "2. Harmonogram",
+      tytul: '="🔴  ZALEGŁE — najstarsze na górze  (" & SUMPRODUCT((' + H + 'A2:A<>"")*(' + H + 'I2:I<>"Wykonany")*(' + dG + '>0)*(' + dG + '<TODAY())) & ")"',
+      nagl: ["ID", "Maszyna", "Obszar", "Częst.", "Termin", "Dni"],
+      f: '=IFERROR(ARRAYFORMULA(SORT(FILTER({' + H + 'B2:B,' + H + 'D2:D,' + H + 'C2:C,' + H + 'E2:E,' + dG + ',TODAY()-' + dG + '},' +
+         H + 'A2:A<>"",' + H + 'I2:I<>"Wykonany",' + dG + '>0,' + dG + '<TODAY()),6,FALSE,3,TRUE)),"✅ Brak zaległości")' },
+    { od: 15, szer: 7, kolor: "#c2410c", tlo: "#fff7ed", cel: nazwaArkuszaUsterek_(),
+      tytul: '="🔧  OTWARTE USTERKI — stojące i pilne na górze  (" & SUMPRODUCT((' + U + 'A2:A<>"")*(' + U + 'I2:I<>"Usunięta")*(' + U + 'I2:I<>"")) & ")"',
+      nagl: ["Maszyna", "ID", "Opis", "Priorytet", "Status", "Stoi", "Dni"],
+      f: '=IFERROR(ARRAYFORMULA(CHOOSECOLS(SORT(FILTER({' + U + 'E2:E,' + U + 'C2:C,' + U + 'F2:F,' + U + 'G2:G,' + U + 'I2:I,' + U + 'N2:N,TODAY()-' + dU + ',' +
+         '(' + U + 'N2:N="TAK")*1,IFERROR(MATCH(' + U + 'G2:G,{"Wysoki";"Średni";"Niski"},0),2)},' +
+         U + 'A2:A<>"",' + U + 'I2:I<>"Usunięta",' + U + 'I2:I<>""),8,FALSE,9,TRUE,7,FALSE),1,2,3,4,5,6,7)),"✅ Brak otwartych usterek")' }
+  ];
+  sh.setRowHeight(4, 34); sh.setRowHeight(5, 26);
+  sekcje.forEach(function (s) {
+    var cel = linkDoArkusza_(s.cel);
+    sh.getRange(4, s.od, 1, s.szer).merge()
+      .setFormula('=HYPERLINK("' + cel + '",' + s.tytul.replace(/^=/, "") + ')')
+      .setFontSize(11).setFontWeight("bold").setFontColor("#ffffff").setBackground(s.kolor);
+    sh.getRange(5, s.od, 1, s.szer).setValues([s.nagl]).setFontSize(8).setFontWeight("bold")
+      .setFontColor(PALETA.szary).setBackground(s.tlo)
+      .setBorder(null, null, true, null, null, null, s.kolor, SpreadsheetApp.BorderStyle.SOLID);
+    sh.getRange(6, s.od).setFormula(s.f);
+    var cialo = sh.getRange(6, s.od, WIER - 5, s.szer);
+    cialo.setFontSize(10).setVerticalAlignment("middle")
+      .setBorder(null, null, null, null, null, true, "#eef2f7", SpreadsheetApp.BorderStyle.SOLID);
+  });
+  // formaty kolumn
+  sh.getRange("B6:B").setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat("@");
+  sh.getRange("C6:C").setWrap(true).setFontWeight("bold");
+  sh.getRange("H6:H").setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat("@");
+  sh.getRange("I6:I").setWrap(true).setFontWeight("bold");
+  sh.getRange("L6:L").setNumberFormat("dd.mm").setHorizontalAlignment("center");
+  sh.getRange("M6:M").setNumberFormat("0").setHorizontalAlignment("center").setFontWeight("bold");
+  sh.getRange("O6:O").setWrap(true).setFontWeight("bold");
+  sh.getRange("P6:P").setHorizontalAlignment("center").setNumberFormat("@");
+  sh.getRange("Q6:Q").setWrap(true).setFontSize(9);
+  sh.getRange("R6:U").setHorizontalAlignment("center");
+  sh.getRange("U6:U").setNumberFormat("0");
+
+  var r = function (a) { return sh.getRange(a); };
+  sh.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$M6>7').setFontColor(PALETA.czerwony).setBold(true).setRanges([r("M6:M")]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$T6="TAK"').setBackground("#fee2e2").setRanges([r("O6:U")]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("TAK").setFontColor(PALETA.czerwony).setBold(true).setRanges([r("T6:T")]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("Wysoki").setFontColor(PALETA.czerwony).setBold(true).setRanges([r("R6:R")]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("Średni").setFontColor(PALETA.zolty).setBold(true).setRanges([r("R6:R")]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("W trakcie").setBackground(PALETA.zoltyTlo).setFontColor("#92400e").setRanges([r("S6:S")]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("Zgłoszona").setBackground(PALETA.czerwonyTlo).setFontColor("#991b1b").setRanges([r("S6:S")]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$U6>7').setFontColor(PALETA.czerwony).setBold(true).setRanges([r("U6:U")]).build()
+  ]);
+  sh.setFrozenRows(5);
+  sh.setTabColor(PALETA.dzis);
+}
+
+/* ==========================================================================
+ *  JEDEN STYL ZAKŁADEK Z DANYMI
+ * ========================================================================== */
+
+/** Wspólny, lekki styl: nagłówek w kolorze zakładki, bez siatki, cienkie linie poziome, zamrożony nagłówek, filtr. */
+function stylOgolny_(sh, kolor, opcje) {
+  opcje = opcje || {};
+  var lastRow = Math.max(sh.getLastRow(), 2), lastCol = Math.max(sh.getLastColumn(), 1);
+  sh.setHiddenGridlines(true);
+  sh.getRange(1, 1, sh.getMaxRows(), lastCol).setFontFamily(CZCIONKA);
+  sh.getRange(1, 1, 1, lastCol).setBackground(kolor).setFontColor("#ffffff").setFontWeight("bold").setFontSize(9)
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true)
+    .setBorder(false, false, false, false, false, false);
+  sh.setRowHeight(1, 36);
+  sh.setFrozenRows(1);
+  if (opcje.zamrozKolumny !== undefined) sh.setFrozenColumns(opcje.zamrozKolumny);
+  var cialo = sh.getRange(2, 1, lastRow - 1, lastCol);
+  cialo.setVerticalAlignment("middle")
+    .setBorder(false, false, true, false, false, true, PALETA.linia, SpreadsheetApp.BorderStyle.SOLID);
+  if (opcje.pasy) {
+    sh.getBandings().forEach(function (b) { b.remove(); });
+    var bd = sh.getRange(1, 1, lastRow, lastCol).applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, true, false);
+    bd.setHeaderRowColor(kolor).setFirstRowColor("#ffffff").setSecondRowColor(PALETA.jasny);
+  }
+  if (!sh.getFilter()) { try { sh.getRange(1, 1, lastRow, lastCol).createFilter(); } catch (e) {} }
+  sh.setTabColor(kolor);
+}
+
+/** Harmonogram (zbiorczy i miesięczne) - V5. */
+function formatujArkuszHarmonogramu(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 1) return;
+  if (sheet.getFilter()) sheet.getFilter().remove();
+  sheet.getBandings().forEach(function (b) { b.remove(); });
+  sheet.getRange(1, 1, Math.max(lastRow, 2), 11).clearDataValidations();
+  sheet.setHiddenGridlines(true);
+
+  sheet.getRange(1, 1, 1, 11).setValues([NAGLOWKI_HARM]).setFontFamily(CZCIONKA)
+    .setFontWeight("bold").setFontSize(9).setBackground(PALETA.harmonogram).setFontColor("#ffffff")
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
+  sheet.setRowHeight(1, 36);
+  sheet.setFrozenRows(1);
+
+  if (lastRow >= 2) {
+    var n = lastRow - 1;
+    var range = sheet.getRange(2, 1, n, 11);
+    range.setFontFamily(CZCIONKA).setVerticalAlignment("middle").setFontSize(10).setFontColor(PALETA.tekst)
+      .setFontWeight("normal").setFontStyle("normal").setWrap(false);
+    sheet.getRange(2, 1, n, 2).setNumberFormat("@").setHorizontalAlignment("center");
+    sheet.getRange(2, 1, n, 1).setFontSize(8).setFontColor("#94a3b8");
+    sheet.getRange(2, 2, n, 1).setFontWeight("bold");
+    sheet.getRange(2, 3, n, 1).setFontSize(9).setFontColor("#475569");
+    sheet.getRange(2, 4, n, 1).setFontWeight("bold").setWrap(true);
+    sheet.getRange(2, 5, n, 1).setHorizontalAlignment("center").setFontSize(9);
+    sheet.getRange(2, 6, n, 1).setWrap(true).setFontSize(9).setFontColor("#475569");
+    sheet.getRange(2, 7, n, 1).setNumberFormat("yyyy-mm-dd").setHorizontalAlignment("center").setFontWeight("bold");
+    sheet.getRange(2, 8, n, 1).setFontSize(9);
+    sheet.getRange(2, 9, n, 2).setHorizontalAlignment("center").setFontWeight("bold").setFontSize(9);
+    sheet.getRange(2, 11, n, 1).setWrap(true).setFontSize(8).setFontColor("#475569");
+
+    sheet.getRange(2, 9, n, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(["Zaplanowany", "Wykonany", "Zaległy"], true).setAllowInvalid(true).build());
+    sheet.getRange(2, 10, n, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(["OK", "NOK", "-"], true).setAllowInvalid(true).build());
+
+    // pasy dzienne: każdy dzień ma swoje tło + wyraźna linia na granicy dni
+    var daty = sheet.getRange(2, 7, n, 1).getDisplayValues();
+    var tla = [], poprzednia = null, jasny = true;
+    for (var r = 0; r < n; r++) {
+      if (daty[r][0] !== poprzednia) { jasny = !jasny; poprzednia = daty[r][0]; }
+      var k = jasny ? PALETA.jasny : "#ffffff";
+      tla.push([k, k, k, k, k, k, k, k, k, k, k]);
+    }
+    range.setBackgrounds(tla);
+    range.setBorder(false, false, true, false, false, true, "#eef2f7", SpreadsheetApp.BorderStyle.SOLID);
+
+    sheet.clearConditionalFormatRules();
+    var rI = sheet.getRange(2, 9, n, 1), rJ = sheet.getRange(2, 10, n, 1), rG = sheet.getRange(2, 7, n, 1);
+    var rAH = sheet.getRange(2, 1, n, 8), rCaly = sheet.getRange(2, 1, n, 11);
+    var dataG = 'IFERROR(DATEVALUE($G2),$G2)';
+    sheet.setConditionalFormatRules([
+      SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$I2="Wykonany"').setFontColor("#94a3b8").setRanges([rAH]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$I2="Wykonany"').setBackground(PALETA.zielonyTlo).setFontColor("#065f46").setRanges([rI]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND(' + dataG + '<TODAY(),$I2<>"Wykonany")').setBackground(PALETA.czerwonyTlo).setFontColor("#991b1b").setRanges([rI, rG]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND(' + dataG + '=TODAY(),$I2<>"Wykonany")').setBackground("#fef9c3").setRanges([rCaly]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("Zaplanowany").setBackground(PALETA.niebieskiTlo).setFontColor("#1e40af").setRanges([rI]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("OK").setBackground(PALETA.zielonyTlo).setFontColor("#065f46").setRanges([rJ]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("NOK").setBackground(PALETA.czerwonyTlo).setFontColor("#991b1b").setRanges([rJ]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("-").setFontColor("#cbd5e1").setRanges([rJ]).build()
+    ]);
+  }
+
+  sheet.setFrozenColumns(4);
+  [95, 55, 105, 210, 85, 260, 115, 115, 95, 55, 220].forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
+  sheet.getRange(1, 1, Math.max(lastRow, 2), 11).createFilter();
+  sheet.setTabColor(sheet.getName() === "2. Harmonogram" ? PALETA.harmonogram : "#93c5fd");
+  sheet.getRange(1, 1).setNote(
+    "LEGENDA:\n• Żółty wiersz = do zrobienia dziś\n• Czerwony status/data = po terminie\n• Szary wiersz = wykonany\n" +
+    "• Pasy tła = kolejne dni\n\nWidok dnia: zakładka „📅 Dziś”. Skok do dzisiaj: ⚙️ CMMS System → Harmonogram → Przejdź do dzisiejszych.");
+}
+
+/** Karta urządzeń - V5. */
+function formatujArkuszUrzadzen_(sheet) {
+  formatujArkuszUrzadzenV4_(sheet);
+  var n = sheet.getLastRow() - 1;
+  sheet.setHiddenGridlines(true);
+  sheet.getRange(1, 1, Math.max(n + 1, 2), 6).setFontFamily(CZCIONKA);
+  sheet.getRange(1, 1, 1, 6).setBackground(PALETA.urzadzenia).setFontSize(9);
+  sheet.setRowHeight(1, 36);
+  if (n >= 1) {
+    var dane = sheet.getRange(2, 1, n, 6);
+    dane.setBorder(false, false, true, false, false, true, PALETA.linia, SpreadsheetApp.BorderStyle.SOLID);
+    // kod QR tylko gdy kolumna F ma obrazki/formuły - wtedy wysoki wiersz; inaczej zwarta lista
+    var maQR = sheet.getRange(2, 6, n, 1).getFormulas().some(function (r) { return r[0]; });
+    if (!maQR) sheet.autoResizeRows(2, n);
+    sheet.getRange(2, 2, n, 1).setFontColor(PALETA.tekst);
+  }
+  sheet.setTabColor(PALETA.urzadzenia);
+}
+
+/** Usterki i awarie - V5 (kolumny A–O, w tym Źródło / Maszyna stoi / Czas przestoju). */
+function formatujArkuszUsterek(sheet) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!sheet || typeof sheet.getName !== "function") sheet = ss.getSheetByName("4. Usterki i Awarie") || ss.getSheetByName("4. Usterki i Awaria");
+  if (!sheet) return;
+  arkuszUsterek_(ss);   // dopilnuj kolumn M–O
+  formatujArkuszUsterekV4_(sheet);
+  if (sheet.getFilter()) sheet.getFilter().remove();
+  sheet.getBandings().forEach(function (b) { b.remove(); });
+  var KOL = 15, ostatni = Math.max(sheet.getLastRow(), 2);
+  sheet.setHiddenGridlines(true);
+  sheet.getRange(1, 1, sheet.getMaxRows(), KOL).setFontFamily(CZCIONKA);
+  sheet.getRange(1, 1, 1, KOL).setBackground(PALETA.usterki).setFontColor("#ffffff").setFontWeight("bold").setFontSize(9)
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
+  sheet.setRowHeight(1, 36);
+  sheet.getRange(2, 1, ostatni - 1, KOL).setBorder(false, false, true, false, false, true, PALETA.linia, SpreadsheetApp.BorderStyle.SOLID);
+  var bd = sheet.getRange(1, 1, ostatni, KOL).applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, true, false);
+  bd.setHeaderRowColor(PALETA.usterki).setFirstRowColor("#ffffff").setSecondRowColor(PALETA.jasny);
+  sheet.getRange("M2:M").setHorizontalAlignment("center").setFontSize(9).setFontColor(PALETA.szary);
+  sheet.getRange("N2:N").setHorizontalAlignment("center").setFontWeight("bold");
+  sheet.getRange("O2:O").setHorizontalAlignment("center").setNumberFormat("0.0");
+  sheet.getRange("N2:N").setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(["TAK", "NIE"], true).setAllowInvalid(true).build());
+  [100, 118, 60, 120, 190, 260, 75, 125, 100, 125, 118, 220, 95, 70, 80].forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
+
+  var reguly = sheet.getConditionalFormatRules();
+  var rCaly = sheet.getRange("A2:O"), rB = sheet.getRange("B2:B"), rN = sheet.getRange("N2:N");
+  var wiek = 'TODAY()-IFERROR(INT(IFERROR(DATEVALUE(LEFT($B2&"",10)),$B2)),TODAY())';
+  reguly.unshift(
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($N2="TAK",$I2<>"Usunięta")').setBackground("#fee2e2").setRanges([rCaly]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($A2<>"",$I2<>"Usunięta",' + wiek + '>7)').setFontColor(PALETA.czerwony).setBold(true).setRanges([rB]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($N2="TAK",$I2<>"Usunięta")').setFontColor(PALETA.czerwony).setBold(true).setRanges([rN]).build()
+  );
+  sheet.setConditionalFormatRules(reguly);
+  sheet.setFrozenColumns(5);
+  sheet.getRange(1, 1, ostatni, KOL).createFilter();
+  sheet.setTabColor(PALETA.usterki);
+  sheet.getRange("B1").setNote("Czerwona data = usterka otwarta dłużej niż 7 dni. Czerwony wiersz = maszyna stoi.");
+}
+
+/** Rejestr przeglądów - tylko wygląd (bez przebudowy danych). */
+function stylRejestru_() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("3. Rejestr Przeglądów");
+  if (!sh || sh.getLastRow() < 1) return;
+  var KOL = 11, ostatni = Math.max(sh.getLastRow(), 2);
+  if (sh.getFilter()) sh.getFilter().remove();
+  stylOgolny_(sh, PALETA.rejestr, { pasy: true, zamrozKolumny: 0 });
+  var n = ostatni - 1;
+  sh.getRange(2, 1, n, KOL).setFontSize(10).setVerticalAlignment("middle");
+  sh.getRange(2, 1, n, 2).setFontSize(8).setFontColor("#94a3b8").setHorizontalAlignment("center");
+  sh.getRange(2, 3, n, 1).setHorizontalAlignment("center").setFontWeight("bold").setNumberFormat("@");
+  sh.getRange(2, 4, n, 1).setFontSize(9).setFontColor("#475569");
+  sh.getRange(2, 5, n, 1).setFontWeight("bold").setWrap(true);
+  sh.getRange(2, 6, n, 1).setHorizontalAlignment("center").setNumberFormat("yyyy-mm-dd hh:mm").setFontSize(9);
+  sh.getRange(2, 8, n, 1).setHorizontalAlignment("center").setNumberFormat("0.0#");
+  sh.getRange(2, 9, n, 1).setHorizontalAlignment("center").setFontWeight("bold");
+  sh.getRange(2, 10, n, 2).setWrap(true).setFontSize(9);
+  [110, 150, 60, 120, 210, 125, 130, 60, 65, 260, 220].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+  var rI = sh.getRange("I2:I"), rCaly = sh.getRange("A2:K");
+  sh.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("OK").setBackground(PALETA.zielonyTlo).setFontColor("#065f46").setRanges([rI]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("NOK").setBackground(PALETA.czerwonyTlo).setFontColor("#991b1b").setRanges([rI]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($A2<>"",REGEXMATCH($B2&"","^PRZ-\\d{4}-\\d+$"))').setFontColor("#94a3b8").setItalic(true).setRanges([rCaly]).build()
+  ]);
+  sh.getRange(1, 1, ostatni, KOL).createFilter();
+  sh.getRange("B1").setNote("Szare, pochyłe wpisy = archiwalne (stare ID przeglądu, sprzed obecnego harmonogramu).");
+}
+
+/* ==========================================================================
+ *  KOLEJNOŚĆ ZAKŁADEK, UKRYCIE TECHNICZNYCH, OCHRONA
+ * ========================================================================== */
+function porzadekZakladek_(ukryjTechniczne) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var aktywny = ss.getActiveSheet();
+  var kod = pobierzKodAktualnegoMiesiaca();
+  var kolejnosc = [ARKUSZ_START, ARKUSZ_DZIS, nazwaArkuszaUsterek_(), "2. Harmonogram", "Harmonogram - " + kod,
+                   "3. Rejestr Przeglądów", "1. Urządzenia", ARKUSZ_TERMINY, "0. Dashboard CMMS", ARKUSZ_PRACOWNICY];
+  var poz = 1;
+  kolejnosc.forEach(function (n) {
+    var sh = ss.getSheetByName(n);
+    if (!sh) return;
+    if (sh.isSheetHidden()) sh.showSheet();
+    ss.setActiveSheet(sh); ss.moveActiveSheet(poz++);
+  });
+  var kolory = {}; kolory[ARKUSZ_START] = PALETA.start; kolory[ARKUSZ_DZIS] = PALETA.dzis;
+  kolory[nazwaArkuszaUsterek_()] = PALETA.usterki; kolory["2. Harmonogram"] = PALETA.harmonogram;
+  kolory["3. Rejestr Przeglądów"] = PALETA.rejestr; kolory["1. Urządzenia"] = PALETA.urzadzenia;
+  kolory[ARKUSZ_TERMINY] = PALETA.terminy; kolory["0. Dashboard CMMS"] = PALETA.dashboard; kolory[ARKUSZ_PRACOWNICY] = PALETA.pracownicy;
+  ss.getSheets().forEach(function (sh) {
+    var n = sh.getName();
+    if (kolory[n]) sh.setTabColor(kolory[n]);
+    else if (n.indexOf("Harmonogram - ") === 0) sh.setTabColor(n === "Harmonogram - " + kod ? "#3b82f6" : "#bfdbfe");
+    var techniczny = n.indexOf("Form Responses") === 0 || n.indexOf("Odpowiedzi") === 0 || n === "stare urzadzenia" || n.indexOf("Etykiety QR") >= 0;
+    if (techniczny) { sh.setTabColor("#cbd5e1"); if (ukryjTechniczne && !sh.isSheetHidden() && ss.getSheets().length > 1) sh.hideSheet(); }
+  });
+  var start = ss.getSheetByName(ARKUSZ_START);
+  ss.setActiveSheet(start || aktywny);
+}
+
+/** Ochrona "tylko ostrzeżenie": nie blokuje nikogo, ale pyta przed zmianą kolumn z kluczami i widoków. */
+function ustawOchrone_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.getSheets().forEach(function (sh) {
+    sh.getProtections(SpreadsheetApp.ProtectionType.RANGE).concat(sh.getProtections(SpreadsheetApp.ProtectionType.SHEET))
+      .forEach(function (p) { if (String(p.getDescription()).indexOf("CMMS:") === 0) p.remove(); });
+  });
+  function chron(zakres, opis) { var p = zakres.protect().setDescription("CMMS: " + opis); p.setWarningOnly(true); }
+  [ARKUSZ_START, ARKUSZ_DZIS].forEach(function (n) {
+    var sh = ss.getSheetByName(n);
+    if (sh) { var p = sh.protect().setDescription("CMMS: widok liczony automatycznie"); p.setWarningOnly(true); }
+  });
+  ss.getSheets().forEach(function (sh) {
+    if (!czyArkuszHarmonogramu_(sh.getName()) || sh.getLastRow() < 2) return;
+    chron(sh.getRange(2, 1, sh.getMaxRows() - 1, 7), "plan przeglądów (ID, maszyna, zakres, data) – zmieniaj przez menu");
+  });
+  var rej = ss.getSheetByName("3. Rejestr Przeglądów");
+  if (rej) chron(rej.getRange(2, 1, rej.getMaxRows() - 1, 3), "ID wpisów w Rejestrze – zapisuje aplikacja");
+  var urz = ss.getSheetByName("1. Urządzenia");
+  if (urz) chron(urz.getRange(2, 1, urz.getMaxRows() - 1, 1), "ID urządzeń – zmiana rozłącza historię i kody QR");
+  var ust = ss.getSheetByName(nazwaArkuszaUsterek_());
+  if (ust) chron(ust.getRange(2, 1, ust.getMaxRows() - 1, 2), "ID i data zgłoszenia usterki");
 }

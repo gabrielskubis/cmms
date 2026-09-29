@@ -84,6 +84,17 @@ Sprawdzone automatycznie (przeglądarka, telefon 390 px i laptop 1600 px, dane z
 - **Zapis bez półprzezroczystego komunikatu**: „Zapisywanie…” z kręciołkiem pokazuje się na klikniętym przycisku; wynik jako pełny, kontrastowy komunikat.
 - Poprawka: po nieudanym zapisie z komunikatem DTR przycisk „Potwierdzam” nie przestaje działać (panel wraca do przycisków wyniku).
 
+## 1e. Nowy wygląd arkusza (V5) — menu „🎨 Odśwież wygląd arkusza”
+
+Zmienia tylko wygląd, układ i widoki — dane, nazwy zakładek i kolumny, z których korzysta aplikacja, zostają bez zmian. Można uruchamiać wielokrotnie.
+
+- **🏠 Start** (pierwsza zakładka, plik otwiera się na niej): kafle liczone na żywo — zaległe, na dziś (wykonano X z Y), rozliczone dziś, otwarte usterki (w tym Wysoki), maszyny stojące; kliknięcie liczby przenosi do szczegółów. Przyciski do wszystkich zakładek, aplikacji i Panelu Zarządu. Realizacja planu wg obszaru z 30 dni (paski postępu). Krótka instrukcja.
+- **📅 Dziś** (widok roboczy kierownika, formuły na żywo): trzy kolumny obok siebie — na dziś do zrobienia, zaległe (najstarsze na górze, >7 dni na czerwono), otwarte usterki (stojące i Wysoki na górze).
+- **Jeden styl zakładek**: nagłówek w kolorze zakładki, bez siatki, cienkie linie poziome, czcionka Roboto, zamrożony nagłówek + filtr, dopracowane szerokości kolumn. Harmonogram: pasy dni, żółty = dziś, czerwony = po terminie, szary = wykonany. Usterki: czerwony wiersz = maszyna stoi, czerwona data = otwarta > 7 dni, kolumny Źródło / Stoi / Przestój. Rejestr: OK/NOK w kolorze, wpisy archiwalne wyszarzone.
+- **Porządek zakładek**: Start → Dziś → Usterki → Harmonogram → bieżący miesiąc → Rejestr → Urządzenia → Terminy → Dashboard → Pracownicy; techniczne (Form Responses, stare urzadzenia, Etykiety QR) ukryte — dostępne przez Widok → Ukryte arkusze.
+- **Ochrona ostrzeżeniem** (nie blokuje): kolumny planu w harmonogramach (A–G), ID w Rejestrze, Urządzeniach i Usterkach, widoki Start/Dziś — Sheets pyta przed zmianą.
+- **Menu** uporządkowane: na górze Start, Dziś, aplikacja, rozliczenie, odświeżenie wyglądu; reszta w podmenu tematycznych.
+
 ## 2. Propozycje kolejnych usprawnień
 
 Kolejność = stosunek wartości do nakładu pracy. „Filar” wskazuje, do którego celu SMART się przyczynia.
