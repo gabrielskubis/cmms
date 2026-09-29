@@ -906,20 +906,38 @@ function naprawStruktureWszystkichHarmonogramow__zapis() {
  * Wyświetlanie formularza wewnątrz arkusza Google Sheets (modal dialog)
  */
 function pokazFormularzPrzegladu() {
-  // To samo rozliczanie co w aplikacji na telefonie (checklista, części, awarie, wykonawca z konta…),
-  // otwarte w oknie arkusza. Kursor w harmonogramie -> ten przegląd; w innej zakładce na wierszu maszyny -> ta maszyna.
+  // Klasyczne okno rozliczenia w arkuszu (szybkie, bez ładowania aplikacji WWW).
+  // Aplikację w pełnym ekranie otwiera osobna pozycja menu „🖥️ Otwórz aplikację przeglądów”.
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getActiveSheet();
-  var nazwa = sh.getName();
-  var wiersz = sh.getActiveCell().getRow();
-  var param = "";
-  if (wiersz >= 2) {
-    if (czyArkuszHarmonogramu_(nazwa)) param = String(sh.getRange(wiersz, 1).getDisplayValue()).trim();
-    if (!param || param.indexOf("PRZ-") !== 0) param = wykryjMaszyneZArkusza_(sh, nazwa, wiersz) || "";
+  var activeSheet = ss.getActiveSheet();
+  var nazwa = activeSheet.getName();
+  var autoSelectedId = "";
+
+  var activeRow = activeSheet.getActiveCell().getRow();
+  if (activeRow >= 2) {
+    if (czyArkuszHarmonogramu_(nazwa)) {
+      // kursor w harmonogramie -> ten konkretny przegląd
+      autoSelectedId = String(activeSheet.getRange(activeRow, 1).getDisplayValue()).trim();
+    } else if (nazwa === "1. Urządzenia") {
+      // kursor w karcie urządzeń -> najpilniejszy przegląd tej maszyny
+      var idUrz = String(activeSheet.getRange(activeRow, 1).getDisplayValue()).trim();
+      autoSelectedId = rozwinParametrQR_(idUrz, pobierzWszystkiePrzegladyDoFormularza(""));
+    }
   }
-  var html = szablonAplikacji_(param, "", "arkusz").evaluate()
-    .setWidth(1280).setHeight(780).setTitle("📝 Rozliczenie przeglądu");
-  SpreadsheetApp.getUi().showModalDialog(html, "📝 Rozliczenie przeglądu – CMMS");
+
+  var ostatniWykonawca = "";
+  try { ostatniWykonawca = PropertiesService.getUserProperties().getProperty("CMMS_WYKONAWCA") || ""; } catch (e) {}
+
+  var template = HtmlService.createTemplateFromFile('FormularzPrzegladu');
+  template.dane = { idPrzegladu: autoSelectedId, ostatniWykonawca: ostatniWykonawca }; template.wybranaMaszyna = wykryjMaszyneZArkusza_(activeSheet, nazwa, activeRow);
+  template.pobranePrzeglady = pobierzWszystkiePrzegladyDoFormularza(autoSelectedId);
+
+  var html = template.evaluate()
+      .setWidth(1000)
+      .setHeight(680)
+      .setTitle('📝 Rozliczenie Przeglądu CMMS');
+
+  SpreadsheetApp.getUi().showModalDialog(html, '📝 Rozliczenie Przeglądu CMMS');
 }
 
 /**

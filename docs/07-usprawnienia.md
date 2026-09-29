@@ -97,9 +97,8 @@ Zmienia tylko wygląd, układ i widoki — dane, nazwy zakładek i kolumny, z kt
 
 ## 1f. Jedno rozliczanie w arkuszu i na stronie
 
-- „⚙️ CMMS System → 📝 Rozlicz przegląd w arkuszu” otwiera **tę samą aplikację** co telefon/QR (w oknie 1280×780): checklista ✓/⚠, pole części, zgłoszenie awarii, obsługa usterek, historia maszyny, wykonawca z konta Google, domyślny czas, DTR raz dziennie. Kursor na przeglądzie w harmonogramie → ten przegląd; na wierszu maszyny w innej zakładce → karta tej maszyny. Przycisk „✕ Zamknij”.
+- ~~Okno w arkuszu = aplikacja~~ — **wycofane na prośbę użytkownika**: „📝 Rozlicz przegląd w arkuszu” znów otwiera klasyczne, szybkie okno (`FormularzPrzegladu.html`). Pełną aplikację otwiera „🖥️ Otwórz aplikację przeglądów”.
 - Zgłoszenie problemu z przeglądu ma pole **„Czy maszyna stoi?”** (TAK → priorytet Wysoki, mail „⛔ MASZYNA STOI”); w „4. Usterki i Awarie” zapisuje się **Źródło** („Przegląd (telefon)” / „Przegląd (arkusz)”) i **Maszyna stoi** — czas przestoju policzy się przy zamknięciu.
-- `FormularzPrzegladu.html` nie jest już używany (zostaje w projekcie, można go usunąć).
 
 ## 2. Propozycje kolejnych usprawnień
 
